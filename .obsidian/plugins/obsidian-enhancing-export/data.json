@@ -1,0 +1,97 @@
+{
+  "items": [
+    {
+      "name": "Markdown"
+    },
+    {
+      "name": "Markdown (Hugo)"
+    },
+    {
+      "name": "Html"
+    },
+    {
+      "name": "TextBundle"
+    },
+    {
+      "name": "Typst"
+    },
+    {
+      "name": "PDF"
+    },
+    {
+      "name": "Word (.docx)"
+    },
+    {
+      "name": "OpenOffice"
+    },
+    {
+      "name": "RTF"
+    },
+    {
+      "name": "Epub"
+    },
+    {
+      "name": "Latex"
+    },
+    {
+      "name": "Latex"
+    },
+    {
+      "name": "Media Wiki"
+    },
+    {
+      "name": "reStructuredText"
+    },
+    {
+      "name": "Textile"
+    },
+    {
+      "name": "OPML"
+    },
+    {
+      "name": "Bibliography"
+    }
+  ],
+  "defaultExportDirectoryMode": "Auto",
+  "openExportedFile": true,
+  "env": {
+    "darwin": {
+      "PATH": "/usr/local/bin:/Library/TeX/texbin:${PATH}",
+      "HOME": "${HOME}"
+    },
+    "aix": {
+      "HOME": "${HOME}"
+    },
+    "android": {
+      "HOME": "${HOME}"
+    },
+    "freebsd": {
+      "HOME": "${HOME}"
+    },
+    "haiku": {
+      "HOME": "${HOME}"
+    },
+    "linux": {
+      "HOME": "${HOME}"
+    },
+    "openbsd": {
+      "HOME": "${HOME}"
+    },
+    "sunos": {
+      "HOME": "${HOME}"
+    },
+    "win32": {
+      "HOME": "${HOME}"
+    },
+    "cygwin": {
+      "HOME": "${HOME}"
+    },
+    "netbsd": {
+      "HOME": "${HOME}"
+    }
+  },
+  "lastExportDirectory": {
+    "win32": "C:\\Users\\Sasha\\Documents"
+  },
+  "lastExportType": "Word (.docx)"
+}

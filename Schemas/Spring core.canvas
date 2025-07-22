@@ -1,0 +1,25 @@
+{
+	"nodes":[
+		{"type":"text","text":"## Configuration","id":"972b3eb92c91990c","x":-849,"y":388,"width":250,"height":60},
+		{"type":"text","text":"# Spring Core","id":"5dab53994bdfa7f1","x":-400,"y":-960,"width":250,"height":60,"color":"3"},
+		{"type":"file","file":"Base/Spring/Old data/BeanFactory.md","id":"9c7ae30c58abb5d0","x":490,"y":-945,"width":400,"height":400},
+		{"type":"file","file":"Base/Spring/Old data/Bean Post Processor.md","id":"c9947da811a456c6","x":490,"y":95,"width":400,"height":400},
+		{"type":"file","file":"Base/Spring/Old data/Полный Bean Lifecycle.md","id":"5ac88ccaa52ad6f2","x":1330,"y":-425,"width":400,"height":400},
+		{"type":"file","file":"Base/Spring/Old data/ScopeBeans.md","id":"e2b202229946eb8b","x":-1489,"y":-655,"width":400,"height":400},
+		{"type":"text","text":"## Bean","id":"6e2fe06f17410b78","x":-849,"y":-480,"width":250,"height":50},
+		{"type":"text","text":"## Bean processing","id":"d228f8691315c9b8","x":-240,"y":-255,"width":250,"height":60},
+		{"type":"file","file":"Base/Spring/Old data/Bean Factory Post Processor.md","id":"ce85582a62ac557c","x":490,"y":-425,"width":400,"height":400}
+	],
+	"edges":[
+		{"id":"3da2945eaeeefd3e","fromNode":"5dab53994bdfa7f1","fromSide":"bottom","toNode":"6e2fe06f17410b78","toSide":"top"},
+		{"id":"fa3e3652b57ee3a0","fromNode":"5dab53994bdfa7f1","fromSide":"bottom","toNode":"d228f8691315c9b8","toSide":"top"},
+		{"id":"d656a4511de31e2a","fromNode":"d228f8691315c9b8","fromSide":"right","toNode":"9c7ae30c58abb5d0","toSide":"left"},
+		{"id":"607456a21b7353f3","fromNode":"d228f8691315c9b8","fromSide":"right","toNode":"ce85582a62ac557c","toSide":"left"},
+		{"id":"eab210b6f07a7a79","fromNode":"d228f8691315c9b8","fromSide":"right","toNode":"c9947da811a456c6","toSide":"left"},
+		{"id":"17b854ee4e19a70b","fromNode":"9c7ae30c58abb5d0","fromSide":"right","toNode":"5ac88ccaa52ad6f2","toSide":"left"},
+		{"id":"3957cde62f890999","fromNode":"ce85582a62ac557c","fromSide":"right","toNode":"5ac88ccaa52ad6f2","toSide":"left"},
+		{"id":"7ced1d0661c8ca73","fromNode":"c9947da811a456c6","fromSide":"right","toNode":"5ac88ccaa52ad6f2","toSide":"left"},
+		{"id":"1003ab2e1e84d6e6","fromNode":"5dab53994bdfa7f1","fromSide":"bottom","toNode":"972b3eb92c91990c","toSide":"top"},
+		{"id":"ba84f428f96a0d0f","fromNode":"6e2fe06f17410b78","fromSide":"left","toNode":"e2b202229946eb8b","toSide":"right"}
+	]
+}

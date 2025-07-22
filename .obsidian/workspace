@@ -1,0 +1,146 @@
+{
+  "main": {
+    "id": "79ca32a498b6ec2f",
+    "type": "split",
+    "children": [
+      {
+        "id": "7b138f94a9c40ee2",
+        "type": "leaf",
+        "state": {
+          "type": "markdown",
+          "state": {
+            "file": "Base/Listeners.md",
+            "mode": "source",
+            "source": false
+          }
+        }
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "d23f0f66cbbc8449",
+    "type": "split",
+    "children": [
+      {
+        "id": "c4cfd74ced508831",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b3b8648a7c4f95b4",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {}
+            }
+          },
+          {
+            "id": "1d2231f334fa02fd",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "tag:#spring",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "35889ec281ae4300",
+            "type": "leaf",
+            "state": {
+              "type": "starred",
+              "state": {}
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "horizontal",
+    "width": 231.5
+  },
+  "right": {
+    "id": "146c5fa3f89c62d6",
+    "type": "split",
+    "children": [
+      {
+        "id": "fcb98b0365c934d8",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b9dae1e4c7f3c76d",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Base/Listeners.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": true,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "fc9b7382a4dc57a3",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Base/Listeners.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "02527312cabadb13",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              }
+            }
+          },
+          {
+            "id": "52bf0839adc625ce",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Base/Listeners.md"
+              }
+            }
+          }
+        ],
+        "currentTab": 2
+      }
+    ],
+    "direction": "horizontal",
+    "width": 199,
+    "collapsed": true
+  },
+  "active": "7b138f94a9c40ee2",
+  "lastOpenFiles": [
+    "Base/Bean Post Processor.md",
+    "Base/BeanFactory.md",
+    "Base/LoggingStarter.md",
+    "Base/Interceptors.md",
+    "Base/Listeners.md",
+    "Base/Интерфейс Callback.md",
+    "Base/Наследование.md",
+    "Base/Без названия 1.md",
+    "Base/@SpringConfigurations.md",
+    "Base/Yaml.md"
+  ]
+}
