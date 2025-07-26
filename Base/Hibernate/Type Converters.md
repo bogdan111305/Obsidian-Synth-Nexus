@@ -1,24 +1,51 @@
-**Type Converters в Hibernate**
+# Type Converters в Hibernate: преобразование типов данных
 
-Type Converters в Hibernate — это механизмы для преобразования данных между Java-объектами и типами базы данных. Они позволяют адаптировать нестандартные типы данных или специфические форматы для хранения в базе и обратно, упрощая работу с данными. Hibernate предоставляет встроенную систему типов для стандартных Java-типов (например, `String`, `Integer`, `Date`) и поддерживает расширение через **Custom Attribute Converters** и **Custom User Types**.
+## Оглавление
+1. [Введение в Type Converters](#введение)
+2. [Basic Types](#basic-types)
+    1. [Type Descriptors](#type-descriptors)
+    2. [Enum User Type](#enum-type)
+3. [Custom Attribute Converter](#attribute-converter)
+    1. [Интерфейс AttributeConverter](#attribute-converter-interface)
+    2. [Аннотация @Convert](#convert-annotation)
+    3. [Auto Apply AttributeConverter](#auto-apply)
+4. [Custom User Type](#user-type)
+    1. [JSON Type](#json-type)
+    2. [Библиотека hibernate-types](#hibernate-types)
+    3. [Аннотация @Type](#type-annotation)
+    4. [Аннотация @TypeDef](#typedef-annotation)
+5. [Практические примеры](#примеры)
+    1. [Конвертер для Enum](#пример-enum)
+    2. [Конвертер для JSON](#пример-json)
+    3. [UserType для сложных объектов](#пример-usertype)
+6. [Лучшие практики](#практики)
+7. [Вопросы для собеседования](#вопросы)
 
-**Зачем нужны Type Converters?**
+---
+
+## <a name="введение"></a>Введение в Type Converters
+
+**Type Converters в Hibernate** — это механизмы для преобразования данных между Java-объектами и типами базы данных. Они позволяют адаптировать нестандартные типы данных или специфические форматы для хранения в базе и обратно, упрощая работу с данными. Hibernate предоставляет встроенную систему типов для стандартных Java-типов (например, `String`, `Integer`, `Date`) и поддерживает расширение через **Custom Attribute Converters** и **Custom User Types**.
+
+### Зачем нужны Type Converters?
 
 - **Преобразование данных**: Обеспечивают маппинг между Java-объектами и SQL-типами, поддерживая нестандартные типы (например, перечисления, JSON, сложные объекты).
 - **Гибкость**: Позволяют настраивать форматы данных и сложные маппинги, такие как сериализация в JSON или маппинг объекта на несколько столбцов.
 - **Прозрачность**: Скрывают детали преобразования, упрощая взаимодействие между Java-кодом и базой данных.
 
-**Basic Types**
+---
+
+## <a name="basic-types"></a>Basic Types
 
 Hibernate предоставляет встроенную систему типов, которая автоматически сопоставляет стандартные Java-типы (например, `String`, `Integer`, `Date`) с соответствующими SQL-типами (например, `VARCHAR`, `INTEGER`, `TIMESTAMP`). Эти типы называются **Basic Types**.
 
-**Type Descriptors**:
+### <a name="type-descriptors"></a>Type Descriptors
 
 - Внутренние компоненты Hibernate, описывающие, как Java-тип мапится на SQL-тип.
 - Управляют преобразованием данных и их сериализацией.
 - Прозрачны для разработчика, но могут быть переопределены через кастомные типы.
 
-**Enum User Type**:
+### <a name="enum-type"></a>Enum User Type
 
 - Перечисления (enum) в Java по умолчанию мапятся на строку (`VARCHAR`) или число (`INTEGER`) в базе данных.
 - Hibernate автоматически поддерживает маппинг enum через `@Enumerated(EnumType.STRING)` или `@Enumerated(EnumType.ORDINAL)`.
@@ -54,28 +81,60 @@ public enum UserStatus {
 
 В этом примере `UserStatus` мапится на строку (`ACTIVE` или `INACTIVE`) в базе данных благодаря `@Enumerated(EnumType.STRING)`.
 
-**Custom Attribute Converter**
+---
+
+## <a name="attribute-converter"></a>Custom Attribute Converter
 
 **Custom Attribute Converter** — механизм JPA 2.1, поддерживаемый Hibernate, для преобразования значений атрибутов сущности между Java и базой данных. Это простой способ обработки нестандартных типов.
 
-**Интерфейс AttributeConverter**:
+### <a name="attribute-converter-interface"></a>Интерфейс AttributeConverter
 
 - Интерфейс `javax.persistence.AttributeConverter<X, Y>` определяет два метода:
     - `convertToDatabaseColumn(X)`: Преобразует Java-объект в SQL-значение.
     - `convertToEntityAttribute(Y)`: Преобразует SQL-значение в Java-объект.
 - `X` — тип Java, `Y` — тип SQL.
 
-**Аннотация @Convert**:
+### <a name="convert-annotation"></a>Аннотация @Convert
 
 - Указывает, что поле сущности использует определённый конвертер.
 - Применяется к конкретному полю, если автоматическое применение не используется.
 
-**Auto Apply AttributeConverter**:
+### <a name="auto-apply"></a>Auto Apply AttributeConverter
 
 - Аннотация `@Converter(autoApply = true)` позволяет автоматически применять конвертер ко всем полям заданного типа в приложении.
 - Упрощает использование, но требует осторожности, чтобы избежать нежелательных преобразований.
 
-**Пример: Конвертер для Enum**
+---
+
+## <a name="user-type"></a>Custom User Type
+
+**Custom User Type** — мощный механизм Hibernate для маппинга сложных объектов, особенно при работе с несколькими столбцами базы данных или нестандартной логикой.
+
+### <a name="json-type"></a>JSON Type
+
+- Позволяет мапить Java-объекты на столбцы типа `JSON` или `JSONB` (например, в PostgreSQL).
+- Часто используется с библиотекой `hibernate-types` для упрощения работы с JSON.
+
+### <a name="hibernate-types"></a>Библиотека hibernate-types
+
+- Расширяет Hibernate, предоставляя готовые типы для JSON, массивов, интервалов дат и других сложных структур.
+- Упрощает интеграцию, заменяя необходимость писать кастомные `UserType` для распространённых случаев.
+
+### <a name="type-annotation"></a>Аннотация @Type
+
+- Указывает, что поле сущности использует кастомный тип Hibernate.
+- Требует указания класса `UserType` или имени зарегистрированного типа.
+
+### <a name="typedef-annotation"></a>Аннотация @TypeDef
+
+- Регистрирует кастомный тип на уровне пакета или приложения.
+- Позволяет использовать тип многократно без явного указания в каждой сущности.
+
+---
+
+## <a name="примеры"></a>Практические примеры
+
+### <a name="пример-enum"></a>Конвертер для Enum
 
 ```java
 import javax.persistence.AttributeConverter;
@@ -128,7 +187,7 @@ public class User {
 }
 ```
 
-**Пример: Конвертер для JSON**
+### <a name="пример-json"></a>Конвертер для JSON
 
 ```java
 import javax.persistence.AttributeConverter;
@@ -140,7 +199,6 @@ import java.util.Map;
 public class JsonConverter implements AttributeConverter<Map<String, Object>, String> {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @ dispatch: groovy
     @Override
     public String convertToDatabaseColumn(Map<String, Object> attribute) {
         try {
@@ -182,31 +240,7 @@ public class User {
 }
 ```
 
-**Custom User Type**
-
-**Custom User Type** — мощный механизм Hibernate для маппинга сложных объектов, особенно при работе с несколькими столбцами базы данных или нестандартной логикой.
-
-**JSON Type**:
-
-- Позволяет мапить Java-объекты на столбцы типа `JSON` или `JSONB` (например, в PostgreSQL).
-- Часто используется с библиотекой `hibernate-types` для упрощения работы с JSON.
-
-**Библиотека hibernate-types**:
-
-- Расширяет Hibernate, предоставляя готовые типы для JSON, массивов, интервалов дат и других сложных структур.
-- Упрощает интеграцию, заменяя необходимость писать кастомные `UserType` для распространённых случаев.
-
-**Аннотация @Type**:
-
-- Указывает, что поле сущности использует кастомный тип Hibernate.
-- Требует указания класса `UserType` или имени зарегистрированного типа.
-
-**Аннотация @TypeDef**:
-
-- Регистрирует кастомный тип на уровне пакета или приложения.
-- Позволяет использовать тип многократно без явного указания в каждой сущности.
-
-**Пример: UserType для объекта Money**
+### <a name="пример-usertype"></a>UserType для объекта Money
 
 ```java
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
@@ -325,7 +359,7 @@ public class Account {
 }
 ```
 
-**Пример: JSON Type с hibernate-types**
+### JSON Type с hibernate-types
 
 ```java
 import com.vladmihalcea.hibernate.type.json.JsonType;
@@ -362,11 +396,53 @@ public class User {
 </dependency>
 ```
 
-**Итог**
+---
 
-- **Basic Types**: Встроенные типы Hibernate для стандартных Java-типов, с поддержкой enum через `@Enumerated`.
-- **Type Descriptors**: Внутренние метаданные для маппинга типов.
-- **Custom Attribute Converter** (`@Converter`, `@Convert`, `autoApply`): Простой способ преобразования одного атрибута в один столбец, идеально для enum и JSON.
-- **Custom User Type** (`@Type`, `@TypeDef`): Мощный механизм для сложных маппингов, включая мультистолбцовые типы и JSON с библиотекой `hibernate-types`.
+## <a name="практики"></a>Лучшие практики
 
-Эти механизмы позволяют гибко настраивать маппинг данных в Hibernate, упрощая работу с нестандартными типами и сложными структурами.
+### Выбор типа конвертера
+
+- **@Enumerated**: Используйте для простых enum без кастомной логики.
+- **AttributeConverter**: Используйте для простых преобразований одного поля в один столбец.
+- **UserType**: Используйте для сложных объектов или мультистолбцовых маппингов.
+
+### Производительность
+
+- Избегайте создания новых объектов в методах конвертации.
+- Кэшируйте результаты преобразований, если это возможно.
+- Используйте пулы объектов для часто используемых типов.
+
+### Обработка ошибок
+
+- Всегда обрабатывайте исключения в конвертерах.
+- Предоставляйте понятные сообщения об ошибках.
+- Логируйте проблемы для отладки.
+
+### Тестирование
+
+- Пишите unit-тесты для всех конвертеров.
+- Тестируйте граничные случаи (null, пустые значения).
+- Проверяйте производительность при больших объемах данных.
+
+---
+
+## <a name="вопросы"></a>Вопросы для собеседования
+
+1. Что такое Type Converters в Hibernate и для чего они используются?
+2. Какие типы конвертеров вы знаете? В чём их различия?
+3. Как работает маппинг enum в Hibernate?
+4. Что такое AttributeConverter и как его реализовать?
+5. Когда стоит использовать UserType вместо AttributeConverter?
+6. Как работает аннотация @Convert?
+7. Что такое autoApply в AttributeConverter?
+8. Как реализовать конвертер для JSON?
+9. Как работает библиотека hibernate-types?
+10. Какие проблемы могут возникнуть при использовании кастомных конвертеров?
+
+---
+
+**Рекомендуемые материалы:**
+- [Hibernate Type System Documentation](https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#basic)
+- [JPA Attribute Converters](https://jakarta.ee/specifications/persistence/3.0/jakarta-persistence-spec-3.0.html#a13346)
+- [Vlad Mihalcea: Hibernate Types](https://vladmihalcea.com/hibernate-types/)
+- [Hibernate Types Library](https://github.com/vladmihalcea/hibernate-types)

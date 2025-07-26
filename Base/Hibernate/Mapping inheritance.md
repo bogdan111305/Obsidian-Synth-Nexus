@@ -1,7 +1,34 @@
-Inheritance. MappedSuperclass(Создание класса BaseEntity, Аннотация @MappedSuperclass, Почему нужно заменить BaseEntity на интерфейс? Создание класса AuditableEntity), Inheritance. TABLE_PER_CLASS (Реализация стратегии TABLE_PER_CLASS, Аннотация @Inheritance, Тестирование функциональности, Почему нельзя использовать IDENTITY в TABLE_PER_CLASS), Inheritance. SINGLE_TABLE(Реализация стратегии SINGLE_TABLE, Тестирование функционала), Inheritance. JOINED(Реализация стратегии JOINED, Тестирование функционала, Резюме), Резюме по всем стратегиям наследования
-# Введение в маппинг наследования в Hibernate
+# Маппинг наследования в Hibernate: стратегии и практическое применение
+
+## Оглавление
+1. [Введение в маппинг наследования](#введение)
+2. [@MappedSuperclass](#mapped-superclass)
+    1. [Создание класса BaseEntity](#base-entity)
+    2. [Аннотация @MappedSuperclass](#mapped-superclass-annotation)
+    3. [Замена BaseEntity на интерфейс](#interface-replacement)
+    4. [Создание класса AuditableEntity](#auditable-entity)
+3. [Стратегия TABLE_PER_CLASS](#table-per-class)
+    1. [Реализация стратегии](#table-per-class-implementation)
+    2. [Аннотация @Inheritance](#inheritance-annotation)
+    3. [Тестирование функциональности](#table-per-class-testing)
+    4. [Ограничения IDENTITY](#identity-limitations)
+4. [Стратегия SINGLE_TABLE](#single-table)
+    1. [Реализация стратегии](#single-table-implementation)
+    2. [Тестирование функционала](#single-table-testing)
+5. [Стратегия JOINED](#joined)
+    1. [Реализация стратегии](#joined-implementation)
+    2. [Тестирование функционала](#joined-testing)
+6. [Сравнение стратегий](#comparison)
+7. [Лучшие практики](#практики)
+8. [Вопросы для собеседования](#вопросы)
+
+---
+
+## <a name="введение"></a>Введение в маппинг наследования
 
 Наследование в Hibernate позволяет моделировать иерархии классов Java в реляционных базах данных. Hibernate поддерживает несколько стратегий маппинга наследования: `@MappedSuperclass`, `TABLE_PER_CLASS`, `SINGLE_TABLE` и `JOINED`. Каждая стратегия подходит для разных сценариев, и выбор зависит от требований к производительности, структуре базы данных и сложности модели.
+
+### Стратегии наследования
 
 - **@MappedSuperclass**: Используется для выноса общих полей и маппингов в базовый класс, не создавая отдельной таблицы.
 - **TABLE_PER_CLASS**: Каждому классу в иерархии соответствует отдельная таблица.
@@ -10,11 +37,13 @@ Inheritance. MappedSuperclass(Создание класса BaseEntity, Анно
 
 Эта статья подробно описывает каждую стратегию, включая реализацию, тестирование и ограничения, с примерами кода и SQL-структур.
 
-# MappedSuperclass
+---
+
+## <a name="mapped-superclass"></a>@MappedSuperclass
 
 Аннотация `@MappedSuperclass` используется для создания базового класса, содержащего общие поля и маппинги, которые наследуются сущностями, но не мапятся на отдельную таблицу.
 
-## Создание класса BaseEntity
+### <a name="base-entity"></a>Создание класса BaseEntity
 
 Класс `BaseEntity` обычно содержит общие атрибуты, такие как идентификатор, временные метки или другие метаданные, которые используются всеми сущностями.
 
@@ -74,7 +103,7 @@ CREATE TABLE users (
 );
 ```
 
-## Аннотация @MappedSuperclass
+### <a name="mapped-superclass-annotation"></a>Аннотация @MappedSuperclass
 
 - **Назначение**: Помечает класс как базовый для наследования маппингов, но не как сущность.
 - **Особенности**:
@@ -83,7 +112,7 @@ CREATE TABLE users (
     - Не поддерживает полиморфные запросы, так как не является сущностью.
 - **Применение**: Используется для общих атрибутов, таких как `id`, `createdAt`, `updatedAt`.
 
-## Почему нужно заменить BaseEntity на интерфейс?
+### <a name="interface-replacement"></a>Замена BaseEntity на интерфейс
 
 Замена `BaseEntity` на интерфейс может быть предпочтительной в следующих случаях:
 
@@ -132,7 +161,7 @@ public class User implements Identifiable {
 - Жёсткое наследование ограничивает гибкость (например, нельзя использовать разные стратегии генерации ID).
 - Может привести к нежелательному наследованию методов или полей.
 
-## Создание класса AuditableEntity
+### <a name="auditable-entity"></a>Создание класса AuditableEntity
 
 Класс `AuditableEntity` расширяет `BaseEntity`, добавляя поля для аудита (например, временные метки).
 
@@ -201,11 +230,13 @@ CREATE TABLE employees (
 - Поля `id`, `createdAt` и `updatedAt` наследуются в таблицу `employees`.
 - Подходит для стандартизации аудита во всех сущностях.
 
-# Стратегия TABLE_PER_CLASS
+---
+
+## <a name="table-per-class"></a>Стратегия TABLE_PER_CLASS
 
 Стратегия `TABLE_PER_CLASS` мапит каждый класс иерархии на отдельную таблицу, содержащую все поля, включая унаследованные.
 
-## Реализация стратегии TABLE_PER_CLASS
+### <a name="table-per-class-implementation"></a>Реализация стратегии TABLE_PER_CLASS
 
 ```java
 import jakarta.persistence.Entity;
@@ -289,7 +320,7 @@ CREATE TABLE trucks (
 - Общие поля (`id`, `brand`) дублируются в каждой таблице.
 - Используется стратегия `SEQUENCE` для генерации ID.
 
-## Аннотация @Inheritance
+### <a name="inheritance-annotation"></a>Аннотация @Inheritance
 
 - **Назначение**: Указывает стратегию наследования для иерархии сущностей.
 - **Атрибут strategy**: `InheritanceType.TABLE_PER_CLASS` задаёт маппинг каждой сущности на отдельную таблицу.
@@ -297,88 +328,50 @@ CREATE TABLE trucks (
     - Не требует дискриминатора, так как таблицы полностью независимы.
     - Поддерживает полиморфные запросы, но с использованием `UNION`.
 
-## Тестирование функциональности
+### <a name="table-per-class-testing"></a>Тестирование функциональности
 
 ```java
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.Persistence;
+// Создание и сохранение объектов
+Car car = new Car();
+car.setBrand("Toyota");
+car.setSeats(5);
+em.persist(car);
 
-public class TablePerClassTest {
-    public static void main(String[] args) {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("testPU");
-        EntityManager em = emf.createEntityManager();
-        em.getTransaction().begin();
+Truck truck = new Truck();
+truck.setBrand("Volvo");
+truck.setLoadCapacity(10.5);
+em.persist(truck);
 
-        Car car = new Car();
-        car.setBrand("Toyota");
-        car.setSeats(5);
-        em.persist(car);
-
-        Truck truck = new Truck();
-        truck.setBrand("Volvo");
-        truck.setLoadCapacity(10.5);
-        em.persist(truck);
-
-        em.getTransaction().commit();
-
-        // Полиморфный запрос
-        var vehicles = em.createQuery("SELECT v FROM Vehicle v", Vehicle.class).getResultList();
-        vehicles.forEach(v -> System.out.println(v.getBrand()));
-        
-        em.close();
-        emf.close();
-    }
-}
+// Полиморфный запрос
+List<Vehicle> vehicles = em.createQuery("SELECT v FROM Vehicle v", Vehicle.class).getResultList();
+// Генерирует UNION запрос для всех таблиц в иерархии
 ```
 
-**Результат**:
+### <a name="identity-limitations"></a>Ограничения IDENTITY
 
-- Создаются записи в таблицах `cars` и `trucks`.
-- Полиморфный запрос возвращает список всех `Vehicle` (`Car` и `Truck`), используя `UNION` для объединения данных.
+**Проблема**: `GenerationType.IDENTITY` не работает с `TABLE_PER_CLASS`, так как:
 
-**SQL-запрос**:
+- Каждая таблица имеет свой автоинкремент.
+- При полиморфных запросах могут возникнуть конфликты ID.
+- Hibernate не может гарантировать уникальность ID между таблицами.
 
-```sql
-SELECT id, brand, seats, NULL as load_capacity FROM cars
-UNION
-SELECT id, brand, NULL as seats, load_capacity FROM trucks;
-```
+**Решение**: Используйте `GenerationType.SEQUENCE` или `GenerationType.TABLE`.
 
-## Почему нельзя использовать IDENTITY в TABLE_PER_CLASS
+---
 
-- **Проблема**: Стратегия `IDENTITY` (автоинкремент в базе данных) создаёт уникальные идентификаторы в каждой таблице независимо. Это приводит к дублированию ID между таблицами (например, `Car` и `Truck` могут иметь одинаковый `id`), что нарушает уникальность в полиморфных запросах.
-- **Решение**: Используйте `SEQUENCE` или `TABLE` для генерации глобально уникальных ID.
-- **Причина**: Hibernate выполняет полиморфные запросы через `UNION`, требуя уникальности ID между всеми таблицами иерархии.
-- **Пример ошибки**:
+## <a name="single-table"></a>Стратегия SINGLE_TABLE
 
-```java
-@Entity
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
-public abstract class Vehicle {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // Ошибка!
-    private Long id;
-}
-```
+Стратегия `SINGLE_TABLE` хранит всю иерархию в одной таблице с дискриминатором для различения типов.
 
-- Это приведёт к дублированию ID в таблицах `cars` и `trucks`, что вызовет некорректные результаты при полиморфных запросах.
-
-# Стратегия SINGLE_TABLE
-
-Стратегия `SINGLE_TABLE` хранит все классы иерархии в одной таблице, используя столбец-дискриминатор для различения типов.
-
-## Реализация стратегии SINGLE_TABLE
+### <a name="single-table-implementation"></a>Реализация стратегии SINGLE_TABLE
 
 ```java
 import jakarta.persistence.Entity;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
-import jakarta.persistence.Id;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.DiscriminatorColumn;
 import jakarta.persistence.DiscriminatorType;
+import jakarta.persistence.DiscriminatorValue;
 
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
@@ -438,9 +431,9 @@ public class Truck extends Vehicle {
 **SQL**:
 
 ```sql
-CREATE TABLE vehicles (
+CREATE TABLE vehicle (
     id BIGSERIAL PRIMARY KEY,
-    vehicle_type VARCHAR(255),
+    vehicle_type VARCHAR(31) NOT NULL,
     brand VARCHAR(255),
     seats INTEGER,
     load_capacity DOUBLE PRECISION
@@ -449,65 +442,42 @@ CREATE TABLE vehicles (
 
 **Работа**:
 
-- Все сущности (`Car`, `Truck`) хранятся в таблице `vehicles`.
-- Столбец `vehicle_type` указывает тип сущности (`CAR` или `TRUCK`).
-- Неиспользуемые поля для конкретного типа остаются `NULL` (например, `load_capacity` для `Car`).
+- Все сущности хранятся в одной таблице `vehicle`.
+- Столбец `vehicle_type` используется как дискриминатор.
+- Специфичные поля (`seats`, `load_capacity`) могут быть NULL для других типов.
 
-## Тестирование функционала
+### <a name="single-table-testing"></a>Тестирование функционала
 
 ```java
-public class SingleTableTest {
-    public static void main(String[] args) {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("testPU");
-        EntityManager em = emf.createEntityManager();
-        em.getTransaction().begin();
+// Создание и сохранение объектов
+Car car = new Car();
+car.setBrand("Toyota");
+car.setSeats(5);
+em.persist(car);
 
-        Car car = new Car();
-        car.setBrand("Toyota");
-        car.setSeats(5);
-        em.persist(car);
+Truck truck = new Truck();
+truck.setBrand("Volvo");
+truck.setLoadCapacity(10.5);
+em.persist(truck);
 
-        Truck truck = new Truck();
-        truck.setBrand("Volvo");
-        truck.setLoadCapacity(10.5);
-        em.persist(truck);
-
-        em.getTransaction().commit();
-
-        // Полиморфный запрос
-        var vehicles = em.createQuery("SELECT v FROM Vehicle v", Vehicle.class).getResultList();
-        vehicles.forEach(v -> System.out.println(v.getBrand() + ", Type: " + v.getClass().getSimpleName()));
-        
-        em.close();
-        emf.close();
-    }
-}
+// Полиморфный запрос
+List<Vehicle> vehicles = em.createQuery("SELECT v FROM Vehicle v", Vehicle.class).getResultList();
+// Простой SELECT без UNION
 ```
 
-**Результат**:
+---
 
-- Записи в таблице `vehicles`:
+## <a name="joined"></a>Стратегия JOINED
 
-```sql
-INSERT INTO vehicles (vehicle_type, brand, seats) VALUES ('CAR', 'Toyota', 5);
-INSERT INTO vehicles (vehicle_type, brand, load_capacity) VALUES ('TRUCK', 'Volvo', 10.5);
-```
+Стратегия `JOINED` использует отдельные таблицы для каждого класса с внешними ключами для связи.
 
-- Полиморфный запрос возвращает все `Vehicle`, автоматически определяя тип по `vehicle_type`.
-
-# Стратегия JOINED
-
-Стратегия `JOINED` хранит общие поля в таблице базового класса, а специфические — в таблицах дочерних классов.
-
-## Реализация стратегии JOINED
+### <a name="joined-implementation"></a>Реализация стратегии JOINED
 
 ```java
 import jakarta.persistence.Entity;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
-import jakarta.persistence.Id;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
+import jakarta.persistence.PrimaryKeyJoinColumn;
 
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
@@ -535,6 +505,7 @@ public abstract class Vehicle {
 }
 
 @Entity
+@PrimaryKeyJoinColumn(name = "vehicle_id")
 public class Car extends Vehicle {
     private int seats;
 
@@ -548,6 +519,7 @@ public class Car extends Vehicle {
 }
 
 @Entity
+@PrimaryKeyJoinColumn(name = "vehicle_id")
 public class Truck extends Vehicle {
     private double loadCapacity;
 
@@ -564,98 +536,107 @@ public class Truck extends Vehicle {
 **SQL**:
 
 ```sql
-CREATE TABLE vehicles (
+CREATE TABLE vehicle (
     id BIGSERIAL PRIMARY KEY,
     brand VARCHAR(255)
 );
 
-CREATE TABLE cars (
-    id BIGINT PRIMARY KEY,
+CREATE TABLE car (
+    vehicle_id BIGINT PRIMARY KEY,
     seats INTEGER,
-    FOREIGN KEY (id) REFERENCES vehicles(id)
+    FOREIGN KEY (vehicle_id) REFERENCES vehicle(id)
 );
 
-CREATE TABLE trucks (
-    id BIGINT PRIMARY KEY,
+CREATE TABLE truck (
+    vehicle_id BIGINT PRIMARY KEY,
     load_capacity DOUBLE PRECISION,
-    FOREIGN KEY (id) REFERENCES vehicles(id)
+    FOREIGN KEY (vehicle_id) REFERENCES vehicle(id)
 );
 ```
 
 **Работа**:
 
-- Таблица `vehicles` хранит общие поля (`id`, `brand`).
-- Таблицы `cars` и `trucks` содержат специфические поля и ссылаются на `vehicles` через внешний ключ.
-- Полиморфные запросы используют `JOIN` для объединения данных.
+- Общие поля хранятся в таблице `vehicle`.
+- Специфичные поля хранятся в отдельных таблицах (`car`, `truck`).
+- Связь осуществляется через внешние ключи.
 
-## Тестирование функционала
+### <a name="joined-testing"></a>Тестирование функционала
 
 ```java
-public class JoinedTest {
-    public static void main(String[] args) {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("testPU");
-        EntityManager em = emf.createEntityManager();
-        em.getTransaction().begin();
+// Создание и сохранение объектов
+Car car = new Car();
+car.setBrand("Toyota");
+car.setSeats(5);
+em.persist(car);
 
-        Car car = new Car();
-        car.setBrand("Toyota");
-        car.setSeats(5);
-        em.persist(car);
+Truck truck = new Truck();
+truck.setBrand("Volvo");
+truck.setLoadCapacity(10.5);
+em.persist(truck);
 
-        Truck truck = new Truck();
-        truck.setBrand("Volvo");
-        truck.setLoadCapacity(10.5);
-        em.persist(truck);
-
-        em.getTransaction().commit();
-
-        // Полиморфный запрос
-        var vehicles = em.createQuery("SELECT v FROM Vehicle v", Vehicle.class).getResultList();
-        vehicles.forEach(v -> System.out.println(v.getBrand() + ", Type: " + v.getClass().getSimpleName()));
-        
-        em.close();
-        emf.close();
-    }
-}
+// Полиморфный запрос
+List<Vehicle> vehicles = em.createQuery("SELECT v FROM Vehicle v", Vehicle.class).getResultList();
+// Использует LEFT JOIN для загрузки связанных данных
 ```
 
-**Результат**:
+---
 
-- Записи:
+## <a name="comparison"></a>Сравнение стратегий
 
-```sql
-INSERT INTO vehicles (id, brand) VALUES (1, 'Toyota');
-INSERT INTO cars (id, seats) VALUES (1, 5);
-INSERT INTO vehicles (id, brand) VALUES (2, 'Volvo');
-INSERT INTO trucks (id, load_capacity) VALUES (2, 10.5);
-```
+| Стратегия | Производительность | Простота запросов | Нормализация | Дискриминатор |
+|-----------|-------------------|-------------------|--------------|---------------|
+| **SINGLE_TABLE** | Высокая | Простые | Нет | Требуется |
+| **JOINED** | Средняя | Сложные (JOIN) | Да | Не требуется |
+| **TABLE_PER_CLASS** | Низкая | Сложные (UNION) | Нет | Не требуется |
+| **@MappedSuperclass** | Высокая | Простые | Нет | Не поддерживает полиморфизм |
 
-- Полиморфный запрос использует `JOIN` для получения данных из всех таблиц.
+### Рекомендации по выбору
 
-## Резюме
+- **SINGLE_TABLE**: Для простых иерархий с небольшим количеством полей.
+- **JOINED**: Для сложных иерархий с нормализованной структурой.
+- **TABLE_PER_CLASS**: Для независимых сущностей с минимальным общим кодом.
+- **@MappedSuperclass**: Для общих полей без полиморфных запросов.
 
-- **Преимущества JOINED**:
-    - Нормализованная структура базы данных.
-    - Экономия пространства, так как общие поля хранятся в одной таблице.
-    - Подходит для сложных иерархий с большим количеством общих полей.
-- **Недостатки**:
-    - Полиморфные запросы требуют `JOIN`, что снижает производительность.
-    - Сложнее в управлении из-за нескольких таблиц.
-- **Применение**: Используется, когда важна нормализация и структура данных.
+---
 
-# Резюме по всем стратегиям наследования
+## <a name="практики"></a>Лучшие практики
 
-|Стратегия|Описание|Преимущества|Недостатки|Применение|
-|---|---|---|---|---|
-|**MappedSuperclass**|Общие поля и маппинги наследуются, но не создают таблицу.|Простота, переиспользование кода, нет таблицы для базового класса.|Не поддерживает полиморфные запросы, ограничена наследованием маппингов.|Общие атрибуты (ID, аудит) для несвязанных сущностей.|
-|**TABLE_PER_CLASS**|Каждая сущность мапится на отдельную таблицу со всеми полями.|Простая структура, независимые таблицы, быстрые запросы к одной сущности.|Дублирование общих полей, проблемы с `IDENTITY`, сложные полиморфные запросы (`UNION`).|Иерархии с независимыми сущностями.|
-|**SINGLE_TABLE**|Все сущности в одной таблице с дискриминатором.|Быстрые запросы, простота управления, поддержка полиморфизма.|Много `NULL` для неиспользуемых полей, проблемы с масштабированием.|Простые иерархии с небольшим числом полей.|
-|**JOINED**|Общие поля в таблице базового класса, специфические — в дочерних.|Нормализованная структура, экономия пространства, поддержка полиморфизма.|Сложные `JOIN`-запросы, снижение производительности.|Сложные иерархии с нормализацией данных.|
+### Выбор стратегии
 
-**Рекомендации**:
+- Анализируйте требования к производительности и сложности запросов.
+- Учитывайте размер иерархии и количество полей.
+- Тестируйте производительность с реальными данными.
 
-- Используйте `@MappedSuperclass` для общих атрибутов, если полиморфизм не нужен.
-- Выбирайте `SINGLE_TABLE` для простых иерархий с высокой производительностью запросов.
-- Используйте `TABLE_PER_CLASS` для независимых сущностей, но избегайте `IDENTITY`.
-- Применяйте `JOINED` для нормализованных структур и сложных иерархий.
-- Рассмотрите интерфейсы вместо базовых классов для большей гибкости.
+### Производительность
+
+- Избегайте глубоких иерархий с JOINED стратегией.
+- Используйте индексы для дискриминаторов в SINGLE_TABLE.
+- Оптимизируйте запросы с помощью fetch joins.
+
+### Поддержка кода
+
+- Документируйте выбор стратегии и его обоснование.
+- Используйте интерфейсы вместо жёсткого наследования.
+- Пишите тесты для всех сценариев использования.
+
+---
+
+## <a name="вопросы"></a>Вопросы для собеседования
+
+1. Какие стратегии наследования поддерживает Hibernate?
+2. В чём разница между @MappedSuperclass и @Inheritance?
+3. Как работает стратегия SINGLE_TABLE?
+4. Какие проблемы возникают с TABLE_PER_CLASS и IDENTITY?
+5. Когда стоит использовать JOINED стратегию?
+6. Что такое дискриминатор и зачем он нужен?
+7. Как влияет выбор стратегии на производительность?
+8. Какие ограничения у @MappedSuperclass?
+9. Как реализовать полиморфные запросы в разных стратегиях?
+10. Как выбрать оптимальную стратегию для конкретного случая?
+
+---
+
+**Рекомендуемые материалы:**
+- [Hibernate Inheritance Mapping](https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#entity-inheritance)
+- [JPA Inheritance](https://jakarta.ee/specifications/persistence/3.0/jakarta-persistence-spec-3.0.html#a13346)
+- [Vlad Mihalcea: Hibernate Inheritance](https://vladmihalcea.com/hibernate-inheritance/)
