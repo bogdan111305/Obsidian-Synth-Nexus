@@ -448,7 +448,347 @@ Collections.sort(list); // [1, 2, 3]
     ```
     
 
-## 10. Пример: Комплексное использование `List`
+## 10. Современные возможности Java 21+
+
+### Pattern Matching для List
+
+Java 21 улучшил pattern matching, что полезно при работе со списками:
+
+```java
+List<Object> mixed = List.of("string", 42, 3.14, null);
+
+// Pattern matching в switch expressions
+String result = switch (mixed.get(0)) {
+    case String s -> "String: " + s;
+    case Integer i -> "Number: " + i;
+    case Double d -> "Double: " + d;
+    case null -> "Null value";
+    default -> "Unknown type";
+};
+
+// Pattern matching в instanceof
+mixed.forEach(item -> {
+    if (item instanceof String s && s.length() > 3) {
+        System.out.println("Long string: " + s);
+    } else if (item instanceof Integer i && i > 25) {
+        System.out.println("Adult age: " + i);
+    }
+});
+```
+
+### Structured Concurrency с List
+
+```java
+try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+    List<Future<String>> futures = List.of(
+        scope.fork(() -> processData("data1")),
+        scope.fork(() -> processData("data2")),
+        scope.fork(() -> processData("data3"))
+    );
+    
+    scope.join();
+    scope.throwIfFailed();
+    
+    List<String> results = futures.stream()
+        .map(Future::resultNow)
+        .collect(Collectors.toList());
+}
+```
+
+### Виртуальные потоки и List
+
+```java
+List<String> data = List.of("a", "b", "c");
+ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+
+CompletableFuture<List<String>> future = CompletableFuture.supplyAsync(() -> {
+    return data.stream()
+        .map(String::toUpperCase)
+        .collect(Collectors.toList());
+}, executor);
+```
+
+## 11. Расширенные примеры использования
+
+### Потокобезопасный список с мониторингом
+
+```java
+public class MonitoredList<T> {
+    private final List<T> list;
+    private final AtomicLong accessCount = new AtomicLong(0);
+    private final AtomicLong modificationCount = new AtomicLong(0);
+    
+    public MonitoredList(List<T> list) {
+        this.list = Collections.synchronizedList(list);
+    }
+    
+    public T get(int index) {
+        accessCount.incrementAndGet();
+        return list.get(index);
+    }
+    
+    public void add(T element) {
+        modificationCount.incrementAndGet();
+        list.add(element);
+    }
+    
+    public void remove(int index) {
+        modificationCount.incrementAndGet();
+        list.remove(index);
+    }
+    
+    public long getAccessCount() { return accessCount.get(); }
+    public long getModificationCount() { return modificationCount.get(); }
+    
+    public List<T> snapshot() {
+        synchronized (list) {
+            return new ArrayList<>(list);
+        }
+    }
+}
+```
+
+### Функциональные операции с List
+
+```java
+public class FunctionalListOperations {
+    
+    // Трансформация с индексами
+    public static <T, R> List<R> transformWithIndex(
+            List<T> list, BiFunction<T, Integer, R> transformer) {
+        return IntStream.range(0, list.size())
+            .mapToObj(i -> transformer.apply(list.get(i), i))
+            .collect(Collectors.toList());
+    }
+    
+    // Фильтрация с предикатом
+    public static <T> List<T> filterList(
+            List<T> list, Predicate<T> predicate) {
+        return list.stream()
+            .filter(predicate)
+            .collect(Collectors.toList());
+    }
+    
+    // Группировка элементов
+    public static <T, K> Map<K, List<T>> groupBy(
+            List<T> list, Function<T, K> keyExtractor) {
+        return list.stream()
+            .collect(Collectors.groupingBy(keyExtractor));
+    }
+    
+    // Слияние списков с разрешением конфликтов
+    public static <T> List<T> mergeLists(
+            List<T> list1, 
+            List<T> list2, 
+            BiFunction<T, T, T> conflictResolver) {
+        Map<Integer, T> merged = new HashMap<>();
+        
+        // Добавляем элементы из первого списка
+        for (int i = 0; i < list1.size(); i++) {
+            merged.put(i, list1.get(i));
+        }
+        
+        // Обрабатываем элементы из второго списка
+        for (int i = 0; i < list2.size(); i++) {
+            T existing = merged.get(i);
+            if (existing != null) {
+                merged.put(i, conflictResolver.apply(existing, list2.get(i)));
+            } else {
+                merged.put(i, list2.get(i));
+            }
+        }
+        
+        return merged.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(Map.Entry::getValue)
+            .collect(Collectors.toList());
+    }
+}
+```
+
+### Кэширование списков
+
+```java
+public class ListCache<T> {
+    private final Map<String, CachedList<T>> cache = new ConcurrentHashMap<>();
+    private final long ttlMillis;
+    
+    public ListCache(long ttlMillis) {
+        this.ttlMillis = ttlMillis;
+    }
+    
+    public List<T> get(String key) {
+        CachedList<T> cached = cache.get(key);
+        if (cached != null && !cached.isExpired()) {
+            return cached.getData();
+        }
+        cache.remove(key);
+        return null;
+    }
+    
+    public void put(String key, List<T> data) {
+        cache.put(key, new CachedList<>(data, System.currentTimeMillis()));
+    }
+    
+    public void cleanup() {
+        cache.entrySet().removeIf(entry -> entry.getValue().isExpired());
+    }
+    
+    private static class CachedList<T> {
+        private final List<T> data;
+        private final long timestamp;
+        
+        public CachedList(List<T> data, long timestamp) {
+            this.data = new ArrayList<>(data);
+            this.timestamp = timestamp;
+        }
+        
+        public List<T> getData() { return new ArrayList<>(data); }
+        
+        public boolean isExpired() {
+            return System.currentTimeMillis() - timestamp > ttlMillis;
+        }
+    }
+}
+```
+
+### Интеграция с внешними системами
+
+```java
+public class ListIntegration {
+    
+    // Загрузка данных из файла
+    public static List<String> loadFromFile(String filename) {
+        try (Stream<String> lines = Files.lines(Paths.get(filename))) {
+            return lines
+                .filter(line -> !line.trim().isEmpty())
+                .collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new RuntimeException("Error loading file", e);
+        }
+    }
+    
+    // Асинхронная загрузка данных
+    public static CompletableFuture<List<String>> loadDataAsync(List<String> urls) {
+        List<CompletableFuture<String>> futures = urls.stream()
+            .map(url -> CompletableFuture.supplyAsync(() -> fetchData(url)))
+            .collect(Collectors.toList());
+        
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+            .thenApply(v -> futures.stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList()));
+    }
+    
+    // Экспорт в CSV
+    public static String toCsv(List<List<String>> data) {
+        return data.stream()
+            .map(row -> row.stream()
+                .map(cell -> "\"" + cell.replace("\"", "\"\"") + "\"")
+                .collect(Collectors.joining(",")))
+            .collect(Collectors.joining("\n"));
+    }
+    
+    private static String fetchData(String url) {
+        // Реализация HTTP запроса
+        return "data from " + url;
+    }
+}
+```
+
+## 12. Вопросы для собеседования
+
+### Базовые вопросы
+
+1. **Объясните разницу между ArrayList и LinkedList**
+   - ArrayList: O(1) доступ по индексу, O(n) вставка/удаление в середине
+   - LinkedList: O(n) доступ по индексу, O(1) вставка/удаление в концах
+   - ArrayList использует массив, LinkedList - двусвязный список
+
+2. **Что такое Vector и почему он устарел?**
+   - Синхронизированная версия ArrayList
+   - Медленнее из-за блокировок
+   - Лучше использовать Collections.synchronizedList или CopyOnWriteArrayList
+
+3. **Объясните производительность различных операций в List**
+   - get/set: O(1) для ArrayList, O(n) для LinkedList
+   - add в конец: O(1) амортизированное для ArrayList, O(1) для LinkedList
+   - add в середину: O(n) для обеих реализаций
+
+### Продвинутые вопросы
+
+4. **Как работает CopyOnWriteArrayList?**
+   - Создает копию массива при каждой модификации
+   - Потокобезопасен для чтения
+   - Подходит для частого чтения, редкой записи
+
+5. **Объясните механизм расширения ArrayList**
+   - Начальная емкость 10
+   - Увеличение на 50% при переполнении
+   - Копирование массива O(n)
+
+6. **Как реализовать потокобезопасный список?**
+```java
+// Вариант 1: Синхронизированная обертка
+List<String> syncList = Collections.synchronizedList(new ArrayList<>());
+
+// Вариант 2: CopyOnWriteArrayList
+List<String> copyOnWriteList = new CopyOnWriteArrayList<>();
+
+// Вариант 3: Ручная синхронизация
+List<String> manualSyncList = new ArrayList<>();
+synchronized (manualSyncList) {
+    manualSyncList.add("item");
+}
+```
+
+### Практические вопросы
+
+7. **Напишите код для удаления дубликатов из списка**
+```java
+public static <T> List<T> removeDuplicates(List<T> list) {
+    return list.stream()
+        .distinct()
+        .collect(Collectors.toList());
+}
+```
+
+8. **Реализуйте обращение списка на месте**
+```java
+public static <T> void reverseList(List<T> list) {
+    for (int i = 0; i < list.size() / 2; i++) {
+        T temp = list.get(i);
+        list.set(i, list.get(list.size() - 1 - i));
+        list.set(list.size() - 1 - i, temp);
+    }
+}
+```
+
+9. **Как найти k-й элемент с конца в LinkedList за один проход?**
+```java
+public static <T> T findKthFromEnd(LinkedList<T> list, int k) {
+    if (k <= 0 || k > list.size()) return null;
+    
+    Iterator<T> fast = list.iterator();
+    Iterator<T> slow = list.iterator();
+    
+    // Продвигаем быстрый итератор на k позиций
+    for (int i = 0; i < k; i++) {
+        if (!fast.hasNext()) return null;
+        fast.next();
+    }
+    
+    // Двигаем оба итератора до конца
+    while (fast.hasNext()) {
+        fast.next();
+        slow.next();
+    }
+    
+    return slow.next();
+}
+```
+
+## 13. Пример: Комплексное использование `List`
 
 ```java
 import java.util.*;

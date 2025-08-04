@@ -447,7 +447,371 @@ System.out.println(set.floor(25));   // 20
     ```
     
 
-## 10. Пример: Комплексное использование `Set`
+## 10. Современные возможности Java 21+
+
+### Pattern Matching для Set
+
+Java 21 улучшил pattern matching, что полезно при работе с множествами:
+
+```java
+Set<Object> mixed = Set.of("string", 42, 3.14, null);
+
+// Pattern matching в switch expressions
+String result = switch (mixed.iterator().next()) {
+    case String s -> "String: " + s;
+    case Integer i -> "Number: " + i;
+    case Double d -> "Double: " + d;
+    case null -> "Null value";
+    default -> "Unknown type";
+};
+
+// Pattern matching в instanceof
+mixed.forEach(item -> {
+    if (item instanceof String s && s.length() > 3) {
+        System.out.println("Long string: " + s);
+    } else if (item instanceof Integer i && i > 25) {
+        System.out.println("Adult age: " + i);
+    }
+});
+```
+
+### Structured Concurrency с Set
+
+```java
+try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+    Set<Future<String>> futures = Set.of(
+        scope.fork(() -> processData("data1")),
+        scope.fork(() -> processData("data2")),
+        scope.fork(() -> processData("data3"))
+    );
+    
+    scope.join();
+    scope.throwIfFailed();
+    
+    Set<String> results = futures.stream()
+        .map(Future::resultNow)
+        .collect(Collectors.toSet());
+}
+```
+
+### Виртуальные потоки и Set
+
+```java
+Set<String> data = Set.of("a", "b", "c");
+ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+
+CompletableFuture<Set<String>> future = CompletableFuture.supplyAsync(() -> {
+    return data.stream()
+        .map(String::toUpperCase)
+        .collect(Collectors.toSet());
+}, executor);
+```
+
+## 11. Расширенные примеры использования
+
+### Потокобезопасный Set с мониторингом
+
+```java
+public class MonitoredSet<T> {
+    private final Set<T> set;
+    private final AtomicLong accessCount = new AtomicLong(0);
+    private final AtomicLong modificationCount = new AtomicLong(0);
+    
+    public MonitoredSet(Set<T> set) {
+        this.set = Collections.synchronizedSet(set);
+    }
+    
+    public boolean add(T element) {
+        modificationCount.incrementAndGet();
+        return set.add(element);
+    }
+    
+    public boolean remove(T element) {
+        modificationCount.incrementAndGet();
+        return set.remove(element);
+    }
+    
+    public boolean contains(T element) {
+        accessCount.incrementAndGet();
+        return set.contains(element);
+    }
+    
+    public long getAccessCount() { return accessCount.get(); }
+    public long getModificationCount() { return modificationCount.get(); }
+    
+    public Set<T> snapshot() {
+        synchronized (set) {
+            return new HashSet<>(set);
+        }
+    }
+}
+```
+
+### Функциональные операции с Set
+
+```java
+public class FunctionalSetOperations {
+    
+    // Трансформация элементов
+    public static <T, R> Set<R> transformSet(
+            Set<T> set, Function<T, R> transformer) {
+        return set.stream()
+            .map(transformer)
+            .collect(Collectors.toSet());
+    }
+    
+    // Фильтрация с предикатом
+    public static <T> Set<T> filterSet(
+            Set<T> set, Predicate<T> predicate) {
+        return set.stream()
+            .filter(predicate)
+            .collect(Collectors.toSet());
+    }
+    
+    // Группировка элементов
+    public static <T, K> Map<K, Set<T>> groupBy(
+            Set<T> set, Function<T, K> keyExtractor) {
+        return set.stream()
+            .collect(Collectors.groupingBy(keyExtractor, Collectors.toSet()));
+    }
+    
+    // Слияние множеств с разрешением конфликтов
+    public static <T> Set<T> mergeSets(
+            Set<T> set1, 
+            Set<T> set2, 
+            BiFunction<T, T, T> conflictResolver) {
+        Set<T> result = new HashSet<>(set1);
+        set2.forEach(item -> {
+            if (result.contains(item)) {
+                result.remove(item);
+                result.add(conflictResolver.apply(item, item));
+            } else {
+                result.add(item);
+            }
+        });
+        return result;
+    }
+    
+    // Нахождение пересечения множеств
+    public static <T> Set<T> intersection(Set<T> set1, Set<T> set2) {
+        return set1.stream()
+            .filter(set2::contains)
+            .collect(Collectors.toSet());
+    }
+    
+    // Нахождение объединения множеств
+    public static <T> Set<T> union(Set<T> set1, Set<T> set2) {
+        Set<T> result = new HashSet<>(set1);
+        result.addAll(set2);
+        return result;
+    }
+    
+    // Нахождение разности множеств
+    public static <T> Set<T> difference(Set<T> set1, Set<T> set2) {
+        return set1.stream()
+            .filter(item -> !set2.contains(item))
+            .collect(Collectors.toSet());
+    }
+}
+```
+
+### Кэширование множеств
+
+```java
+public class SetCache<T> {
+    private final Map<String, CachedSet<T>> cache = new ConcurrentHashMap<>();
+    private final long ttlMillis;
+    
+    public SetCache(long ttlMillis) {
+        this.ttlMillis = ttlMillis;
+    }
+    
+    public Set<T> get(String key) {
+        CachedSet<T> cached = cache.get(key);
+        if (cached != null && !cached.isExpired()) {
+            return cached.getData();
+        }
+        cache.remove(key);
+        return null;
+    }
+    
+    public void put(String key, Set<T> data) {
+        cache.put(key, new CachedSet<>(data, System.currentTimeMillis()));
+    }
+    
+    public void cleanup() {
+        cache.entrySet().removeIf(entry -> entry.getValue().isExpired());
+    }
+    
+    private static class CachedSet<T> {
+        private final Set<T> data;
+        private final long timestamp;
+        
+        public CachedSet(Set<T> data, long timestamp) {
+            this.data = new HashSet<>(data);
+            this.timestamp = timestamp;
+        }
+        
+        public Set<T> getData() { return new HashSet<>(data); }
+        
+        public boolean isExpired() {
+            return System.currentTimeMillis() - timestamp > ttlMillis;
+        }
+    }
+}
+```
+
+### Интеграция с внешними системами
+
+```java
+public class SetIntegration {
+    
+    // Загрузка уникальных данных из файла
+    public static Set<String> loadUniqueFromFile(String filename) {
+        try (Stream<String> lines = Files.lines(Paths.get(filename))) {
+            return lines
+                .filter(line -> !line.trim().isEmpty())
+                .collect(Collectors.toSet());
+        } catch (IOException e) {
+            throw new RuntimeException("Error loading file", e);
+        }
+    }
+    
+    // Асинхронная загрузка уникальных данных
+    public static CompletableFuture<Set<String>> loadUniqueDataAsync(List<String> urls) {
+        List<CompletableFuture<String>> futures = urls.stream()
+            .map(url -> CompletableFuture.supplyAsync(() -> fetchData(url)))
+            .collect(Collectors.toList());
+        
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+            .thenApply(v -> futures.stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.toSet()));
+    }
+    
+    // Экспорт в JSON
+    public static String toJson(Set<String> set) {
+        return set.stream()
+            .map(item -> "\"" + item.replace("\"", "\\\"") + "\"")
+            .collect(Collectors.joining(", ", "[", "]"));
+    }
+    
+    // Нахождение дубликатов в списке
+    public static <T> Set<T> findDuplicates(List<T> list) {
+        Set<T> seen = new HashSet<>();
+        Set<T> duplicates = new HashSet<>();
+        
+        for (T item : list) {
+            if (!seen.add(item)) {
+                duplicates.add(item);
+            }
+        }
+        
+        return duplicates;
+    }
+    
+    private static String fetchData(String url) {
+        // Реализация HTTP запроса
+        return "data from " + url;
+    }
+}
+```
+
+## 12. Вопросы для собеседования
+
+### Базовые вопросы
+
+1. **Объясните разницу между HashSet, LinkedHashSet и TreeSet**
+   - HashSet: O(1) среднее время, неупорядоченный
+   - LinkedHashSet: O(1) среднее время, сохраняет порядок вставки
+   - TreeSet: O(log n), отсортированный по элементам
+
+2. **Что такое ConcurrentSkipListSet и когда его использовать?**
+   - Потокобезопасная альтернатива TreeSet
+   - Использует skip-list структуру
+   - Подходит для многопоточных приложений с сортировкой
+
+3. **Объясните производительность различных операций в Set**
+   - add/remove/contains: O(1) среднее для HashSet, O(log n) для TreeSet
+   - Итерация: O(n) для всех реализаций
+   - Навигация: O(log n) для TreeSet (ceiling, floor)
+
+### Продвинутые вопросы
+
+4. **Как работает хеширование в HashSet?**
+   - Использует HashMap внутри
+   - `hashCode()` для распределения элементов
+   - Коллизии разрешаются списками или деревьями
+
+5. **Объясните механизм балансировки в TreeSet**
+   - Использует красно-черное дерево
+   - Автоматическая балансировка при вставке/удалении
+   - Гарантирует O(log n) для всех операций
+
+6. **Как реализовать потокобезопасный Set?**
+```java
+// Вариант 1: Синхронизированная обертка
+Set<String> syncSet = Collections.synchronizedSet(new HashSet<>());
+
+// Вариант 2: ConcurrentSkipListSet
+Set<String> concurrentSet = new ConcurrentSkipListSet<>();
+
+// Вариант 3: CopyOnWriteArraySet
+Set<String> copyOnWriteSet = new CopyOnWriteArraySet<>();
+```
+
+### Практические вопросы
+
+7. **Напишите код для нахождения пересечения двух множеств**
+```java
+public static <T> Set<T> intersection(Set<T> set1, Set<T> set2) {
+    return set1.stream()
+        .filter(set2::contains)
+        .collect(Collectors.toSet());
+}
+```
+
+8. **Реализуйте Set с ограничением размера**
+```java
+public class BoundedSet<T> extends LinkedHashSet<T> {
+    private final int maxSize;
+    
+    public BoundedSet(int maxSize) {
+        this.maxSize = maxSize;
+    }
+    
+    @Override
+    public boolean add(T element) {
+        if (size() >= maxSize) {
+            remove(iterator().next());
+        }
+        return super.add(element);
+    }
+}
+```
+
+9. **Как найти все подмножества множества?**
+```java
+public static <T> Set<Set<T>> getAllSubsets(Set<T> set) {
+    List<T> list = new ArrayList<>(set);
+    Set<Set<T>> subsets = new HashSet<>();
+    
+    int n = list.size();
+    for (int i = 0; i < (1 << n); i++) {
+        Set<T> subset = new HashSet<>();
+        for (int j = 0; j < n; j++) {
+            if ((i & (1 << j)) != 0) {
+                subset.add(list.get(j));
+            }
+        }
+        subsets.add(subset);
+    }
+    
+    return subsets;
+}
+```
+
+## 13. Пример: Комплексное использование `Set`
 
 ```java
 import java.util.*;

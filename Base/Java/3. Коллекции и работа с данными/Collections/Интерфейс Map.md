@@ -397,6 +397,356 @@ public class DataCache {
 }
 ```
 
-## 14. Заключение
+## 14. Современные возможности Java 21+
+
+### Pattern Matching для Map
+
+Java 21 улучшил pattern matching, что полезно при работе с Map:
+
+```java
+Map<String, Object> data = Map.of("name", "John", "age", 30, "city", "NYC");
+
+// Pattern matching в switch expressions
+String result = switch (data.get("type")) {
+    case String s -> "String: " + s;
+    case Integer i -> "Number: " + i;
+    case null -> "Null value";
+    default -> "Unknown type";
+};
+
+// Pattern matching в instanceof
+data.forEach((key, value) -> {
+    if (value instanceof String s && s.length() > 3) {
+        System.out.println("Long string: " + s);
+    } else if (value instanceof Integer i && i > 25) {
+        System.out.println("Adult age: " + i);
+    }
+});
+```
+
+### Structured Concurrency с Map
+
+```java
+try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+    Map<String, Future<String>> futures = Map.of(
+        "user", scope.fork(() -> fetchUserData()),
+        "profile", scope.fork(() -> fetchProfileData()),
+        "settings", scope.fork(() -> fetchSettingsData())
+    );
+    
+    scope.join();
+    scope.throwIfFailed();
+    
+    Map<String, String> results = futures.entrySet().stream()
+        .collect(Collectors.toMap(
+            Map.Entry::getKey,
+            entry -> entry.getValue().resultNow()
+        ));
+}
+```
+
+### Виртуальные потоки и Map
+
+```java
+Map<String, CompletableFuture<String>> asyncMap = Map.of(
+    "key1", CompletableFuture.supplyAsync(() -> "value1"),
+    "key2", CompletableFuture.supplyAsync(() -> "value2")
+);
+
+ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+CompletableFuture<Map<String, String>> result = CompletableFuture.supplyAsync(() -> {
+    return asyncMap.entrySet().stream()
+        .collect(Collectors.toMap(
+            Map.Entry::getKey,
+            entry -> entry.getValue().join()
+        ));
+}, executor);
+```
+
+## 15. Расширенные примеры использования
+
+### Кэширование с TTL (Time To Live)
+
+```java
+public class TTLCache<K, V> {
+    private final Map<K, CacheEntry<V>> cache = new ConcurrentHashMap<>();
+    private final long ttlMillis;
+    
+    public TTLCache(long ttlMillis) {
+        this.ttlMillis = ttlMillis;
+    }
+    
+    public V get(K key) {
+        CacheEntry<V> entry = cache.get(key);
+        if (entry != null && !entry.isExpired()) {
+            return entry.getValue();
+        }
+        cache.remove(key);
+        return null;
+    }
+    
+    public void put(K key, V value) {
+        cache.put(key, new CacheEntry<>(value, System.currentTimeMillis()));
+    }
+    
+    public void cleanup() {
+        cache.entrySet().removeIf(entry -> entry.getValue().isExpired());
+    }
+    
+    private static class CacheEntry<V> {
+        private final V value;
+        private final long timestamp;
+        
+        public CacheEntry(V value, long timestamp) {
+            this.value = value;
+            this.timestamp = timestamp;
+        }
+        
+        public V getValue() { return value; }
+        
+        public boolean isExpired() {
+            return System.currentTimeMillis() - timestamp > ttlMillis;
+        }
+    }
+}
+```
+
+### Потокобезопасный кэш с ограничением размера
+
+```java
+public class BoundedCache<K, V> {
+    private final Map<K, V> cache;
+    private final int maxSize;
+    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    
+    public BoundedCache(int maxSize) {
+        this.maxSize = maxSize;
+        this.cache = new LinkedHashMap<>(maxSize, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+                return size() > maxSize;
+            }
+        };
+    }
+    
+    public V get(K key) {
+        lock.readLock().lock();
+        try {
+            return cache.get(key);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+    
+    public void put(K key, V value) {
+        lock.writeLock().lock();
+        try {
+            cache.put(key, value);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+    
+    public Map<K, V> snapshot() {
+        lock.readLock().lock();
+        try {
+            return new HashMap<>(cache);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+}
+```
+
+### Функциональные операции с Map
+
+```java
+public class FunctionalMapOperations {
+    
+    // Трансформация значений
+    public static <K, V, R> Map<K, R> transformValues(
+            Map<K, V> map, Function<V, R> transformer) {
+        return map.entrySet().stream()
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                entry -> transformer.apply(entry.getValue())
+            ));
+    }
+    
+    // Фильтрация по ключам и значениям
+    public static <K, V> Map<K, V> filterMap(
+            Map<K, V> map, 
+            Predicate<K> keyFilter, 
+            Predicate<V> valueFilter) {
+        return map.entrySet().stream()
+            .filter(entry -> keyFilter.test(entry.getKey()) && 
+                           valueFilter.test(entry.getValue()))
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue
+            ));
+    }
+    
+    // Группировка с агрегацией
+    public static <K, V> Map<K, List<V>> groupByAndAggregate(
+            List<V> items, 
+            Function<V, K> keyExtractor,
+            Function<V, V> valueTransformer) {
+        return items.stream()
+            .collect(Collectors.groupingBy(
+                keyExtractor,
+                Collectors.mapping(valueTransformer, Collectors.toList())
+            ));
+    }
+    
+    // Слияние Map с разрешением конфликтов
+    public static <K, V> Map<K, V> mergeMaps(
+            Map<K, V> map1, 
+            Map<K, V> map2, 
+            BiFunction<V, V, V> conflictResolver) {
+        Map<K, V> result = new HashMap<>(map1);
+        map2.forEach((key, value) -> 
+            result.merge(key, value, conflictResolver));
+        return result;
+    }
+}
+```
+
+### Интеграция с внешними системами
+
+```java
+public class MapIntegration {
+    
+    // Загрузка конфигурации из файла
+    public static Map<String, String> loadConfig(String filename) {
+        try (Stream<String> lines = Files.lines(Paths.get(filename))) {
+            return lines
+                .filter(line -> !line.trim().isEmpty() && !line.startsWith("#"))
+                .map(line -> line.split("=", 2))
+                .filter(parts -> parts.length == 2)
+                .collect(Collectors.toMap(
+                    parts -> parts[0].trim(),
+                    parts -> parts[1].trim()
+                ));
+        } catch (IOException e) {
+            throw new RuntimeException("Error loading config", e);
+        }
+    }
+    
+    // Экспорт в JSON
+    public static String toJson(Map<String, Object> map) {
+        return map.entrySet().stream()
+            .map(entry -> String.format("\"%s\": \"%s\"", 
+                entry.getKey(), entry.getValue()))
+            .collect(Collectors.joining(", ", "{", "}"));
+    }
+    
+    // Асинхронная загрузка данных
+    public static CompletableFuture<Map<String, String>> loadDataAsync(
+            List<String> urls) {
+        List<CompletableFuture<Map.Entry<String, String>>> futures = 
+            urls.stream()
+                .map(url -> CompletableFuture.supplyAsync(() -> 
+                    Map.entry(url, fetchData(url))))
+                .collect(Collectors.toList());
+        
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+            .thenApply(v -> futures.stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    Map.Entry::getValue
+                )));
+    }
+    
+    private static String fetchData(String url) {
+        // Реализация HTTP запроса
+        return "data from " + url;
+    }
+}
+```
+
+## 16. Вопросы для собеседования
+
+### Базовые вопросы
+
+1. **Объясните разницу между HashMap и TreeMap**
+   - HashMap: O(1) среднее время, неупорядоченный
+   - TreeMap: O(log n), отсортированный по ключам
+   - HashMap использует хеш-таблицу, TreeMap - красно-черное дерево
+
+2. **Что такое ConcurrentHashMap и как он работает?**
+   - Потокобезопасная реализация Map
+   - Использует сегментированную структуру для уменьшения блокировок
+   - CAS операции для атомарных операций
+
+3. **Объясните механизм хеширования в HashMap**
+   - `hashCode()` вычисляет хеш ключа
+   - Индекс = (capacity - 1) & hash
+   - Коллизии разрешаются списками или деревьями (Java 8+)
+
+### Продвинутые вопросы
+
+4. **Как работает WeakHashMap?**
+   - Ключи хранятся как WeakReference
+   - Автоматически удаляются сборщиком мусора
+   - Полезен для кэшей без утечек памяти
+
+5. **Объясните производительность различных реализаций Map**
+   - HashMap: O(1) среднее, O(n) худшее
+   - TreeMap: O(log n) гарантированное
+   - LinkedHashMap: O(1) среднее + порядок
+
+6. **Как реализовать LRU кэш с помощью LinkedHashMap?**
+```java
+LinkedHashMap<K, V> lruCache = new LinkedHashMap<>(capacity, 0.75f, true) {
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+        return size() > capacity;
+    }
+};
+```
+
+### Практические вопросы
+
+7. **Напишите код для нахождения наиболее частого элемента**
+```java
+public static <T> T findMostFrequent(List<T> list) {
+    return list.stream()
+        .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+        .entrySet().stream()
+        .max(Map.Entry.comparingByValue())
+        .map(Map.Entry::getKey)
+        .orElse(null);
+}
+```
+
+8. **Реализуйте потокобезопасный кэш с TTL**
+```java
+public class ThreadSafeCache<K, V> {
+    private final Map<K, CacheEntry<V>> cache = new ConcurrentHashMap<>();
+    
+    public V get(K key) {
+        CacheEntry<V> entry = cache.get(key);
+        if (entry != null && !entry.isExpired()) {
+            return entry.getValue();
+        }
+        cache.remove(key);
+        return null;
+    }
+    
+    public void put(K key, V value, long ttlMillis) {
+        cache.put(key, new CacheEntry<>(value, System.currentTimeMillis() + ttlMillis));
+    }
+}
+```
+
+9. **Как оптимизировать производительность HashMap?**
+   - Задавайте начальную емкость
+   - Реализуйте качественный hashCode() и equals()
+   - Используйте примитивные типы где возможно
+   - Избегайте частого изменения размера
+
+## 17. Заключение
 
 `Map` — универсальный интерфейс для хранения пар ключ-значение. Реализации (`HashMap`, `LinkedHashMap`, `TreeMap`, `ConcurrentHashMap`, `WeakHashMap`) покрывают различные сценарии: от быстрого доступа и порядка вставки до сортировки, потокобезопасности и автоматической очистки. Основанные на хеш-таблицах или деревьях, они используют JVM-механизмы (CAS, AQS, GC) для эффективности. Поддержка виртуальных потоков (Java 21+) и интеграция с `CompletableFuture` делают их ещё мощнее. Следование лучшим практикам минимизирует риски и оптимизирует производительность.

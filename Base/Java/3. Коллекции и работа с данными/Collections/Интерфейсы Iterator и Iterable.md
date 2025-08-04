@@ -375,7 +375,467 @@ spliterator.forEachRemaining(System.out::println);
 6. **Проверяйте поддержку `remove`**:
     - Избегайте вызовов `remove` в неизменяемых коллекциях.
 
-## 9. Пример: Комплексное использование
+## 9. Современные возможности Java 21+
+
+### Pattern Matching для Iterator и Iterable
+
+Java 21 улучшил pattern matching, что полезно при работе с итераторами:
+
+```java
+Iterable<Object> mixed = List.of("string", 42, 3.14, null);
+
+// Pattern matching в switch expressions
+String result = switch (mixed.iterator().next()) {
+    case String s -> "String: " + s;
+    case Integer i -> "Number: " + i;
+    case Double d -> "Double: " + d;
+    case null -> "Null value";
+    default -> "Unknown type";
+};
+
+// Pattern matching в instanceof
+mixed.forEach(item -> {
+    if (item instanceof String s && s.length() > 3) {
+        System.out.println("Long string: " + s);
+    } else if (item instanceof Integer i && i > 25) {
+        System.out.println("Adult age: " + i);
+    }
+});
+```
+
+### Structured Concurrency с Iterator
+
+```java
+try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+    Iterator<String> iterator = List.of("A", "B", "C").iterator();
+    List<Future<String>> futures = new ArrayList<>();
+    
+    while (iterator.hasNext()) {
+        String item = iterator.next();
+        futures.add(scope.fork(() -> processItem(item)));
+    }
+    
+    scope.join();
+    scope.throwIfFailed();
+    
+    List<String> results = futures.stream()
+        .map(Future::resultNow)
+        .collect(Collectors.toList());
+}
+```
+
+### Виртуальные потоки и Iterator
+
+```java
+Iterable<String> data = List.of("a", "b", "c");
+ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+
+CompletableFuture<List<String>> future = CompletableFuture.supplyAsync(() -> {
+    List<String> results = new ArrayList<>();
+    for (String item : data) {
+        results.add(item.toUpperCase());
+    }
+    return results;
+}, executor);
+```
+
+## 10. Расширенные примеры использования
+
+### Потокобезопасный Iterator с мониторингом
+
+```java
+public class MonitoredIterator<T> implements Iterator<T> {
+    private final Iterator<T> delegate;
+    private final AtomicLong accessCount = new AtomicLong(0);
+    private final AtomicLong modificationCount = new AtomicLong(0);
+    
+    public MonitoredIterator(Iterator<T> delegate) {
+        this.delegate = delegate;
+    }
+    
+    @Override
+    public boolean hasNext() {
+        accessCount.incrementAndGet();
+        return delegate.hasNext();
+    }
+    
+    @Override
+    public T next() {
+        accessCount.incrementAndGet();
+        return delegate.next();
+    }
+    
+    @Override
+    public void remove() {
+        modificationCount.incrementAndGet();
+        delegate.remove();
+    }
+    
+    public long getAccessCount() { return accessCount.get(); }
+    public long getModificationCount() { return modificationCount.get(); }
+}
+```
+
+### Функциональные операции с Iterator
+
+```java
+public class FunctionalIteratorOperations {
+    
+    // Трансформация итератора
+    public static <T, R> Iterator<R> transformIterator(
+            Iterator<T> iterator, Function<T, R> transformer) {
+        return new Iterator<R>() {
+            @Override
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+            
+            @Override
+            public R next() {
+                return transformer.apply(iterator.next());
+            }
+        };
+    }
+    
+    // Фильтрация итератора
+    public static <T> Iterator<T> filterIterator(
+            Iterator<T> iterator, Predicate<T> predicate) {
+        return new Iterator<T>() {
+            private T nextItem = null;
+            private boolean hasNext = false;
+            
+            @Override
+            public boolean hasNext() {
+                if (hasNext) return true;
+                while (iterator.hasNext()) {
+                    T item = iterator.next();
+                    if (predicate.test(item)) {
+                        nextItem = item;
+                        hasNext = true;
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            @Override
+            public T next() {
+                if (!hasNext()) throw new NoSuchElementException();
+                hasNext = false;
+                return nextItem;
+            }
+        };
+    }
+    
+    // Объединение итераторов
+    public static <T> Iterator<T> concatIterators(Iterator<T>... iterators) {
+        return new Iterator<T>() {
+            private int currentIndex = 0;
+            
+            @Override
+            public boolean hasNext() {
+                while (currentIndex < iterators.length) {
+                    if (iterators[currentIndex].hasNext()) {
+                        return true;
+                    }
+                    currentIndex++;
+                }
+                return false;
+            }
+            
+            @Override
+            public T next() {
+                if (!hasNext()) throw new NoSuchElementException();
+                return iterators[currentIndex].next();
+            }
+        };
+    }
+    
+    // Итератор с ограничением
+    public static <T> Iterator<T> limitIterator(Iterator<T> iterator, int limit) {
+        return new Iterator<T>() {
+            private int count = 0;
+            
+            @Override
+            public boolean hasNext() {
+                return count < limit && iterator.hasNext();
+            }
+            
+            @Override
+            public T next() {
+                if (!hasNext()) throw new NoSuchElementException();
+                count++;
+                return iterator.next();
+            }
+        };
+    }
+}
+```
+
+### Кастомные Iterable реализации
+
+```java
+public class CustomIterables {
+    
+    // Iterable для диапазона чисел
+    public static Iterable<Integer> range(int start, int end) {
+        return () -> new Iterator<Integer>() {
+            private int current = start;
+            
+            @Override
+            public boolean hasNext() {
+                return current < end;
+            }
+            
+            @Override
+            public Integer next() {
+                if (!hasNext()) throw new NoSuchElementException();
+                return current++;
+            }
+        };
+    }
+    
+    // Iterable для бесконечной последовательности
+    public static Iterable<Integer> infiniteSequence(int start) {
+        return () -> new Iterator<Integer>() {
+            private int current = start;
+            
+            @Override
+            public boolean hasNext() {
+                return true;
+            }
+            
+            @Override
+            public Integer next() {
+                return current++;
+            }
+        };
+    }
+    
+    // Iterable для файлов в директории
+    public static Iterable<Path> filesInDirectory(Path directory) {
+        return () -> {
+            try {
+                return Files.list(directory).iterator();
+            } catch (IOException e) {
+                throw new RuntimeException("Error listing directory", e);
+            }
+        };
+    }
+    
+    // Iterable для строк в файле
+    public static Iterable<String> linesInFile(Path file) {
+        return () -> {
+            try {
+                return Files.lines(file).iterator();
+            } catch (IOException e) {
+                throw new RuntimeException("Error reading file", e);
+            }
+        };
+    }
+}
+```
+
+### Интеграция с внешними системами
+
+```java
+public class IteratorIntegration {
+    
+    // Итератор для базы данных
+    public static Iterator<User> databaseIterator(DataSource dataSource) {
+        try {
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement("SELECT * FROM users");
+            ResultSet rs = stmt.executeQuery();
+            
+            return new Iterator<User>() {
+                private boolean hasNext = rs.next();
+                
+                @Override
+                public boolean hasNext() {
+                    return hasNext;
+                }
+                
+                @Override
+                public User next() {
+                    if (!hasNext()) throw new NoSuchElementException();
+                    try {
+                        User user = new User(rs.getString("name"), rs.getInt("age"));
+                        hasNext = rs.next();
+                        return user;
+                    } catch (SQLException e) {
+                        throw new RuntimeException("Database error", e);
+                    }
+                }
+            };
+        } catch (SQLException e) {
+            throw new RuntimeException("Database connection error", e);
+        }
+    }
+    
+    // Итератор для HTTP API
+    public static Iterator<String> apiIterator(List<String> urls) {
+        return new Iterator<String>() {
+            private int currentIndex = 0;
+            
+            @Override
+            public boolean hasNext() {
+                return currentIndex < urls.size();
+            }
+            
+            @Override
+            public String next() {
+                if (!hasNext()) throw new NoSuchElementException();
+                return fetchData(urls.get(currentIndex++));
+            }
+            
+            private String fetchData(String url) {
+                // Реализация HTTP запроса
+                return "data from " + url;
+            }
+        };
+    }
+    
+    // Сериализация итератора
+    public static <T extends Serializable> byte[] serializeIterator(Iterator<T> iterator) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            List<T> list = new ArrayList<>();
+            iterator.forEachRemaining(list::add);
+            oos.writeObject(list);
+            return baos.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("Serialization error", e);
+        }
+    }
+    
+    @SuppressWarnings("unchecked")
+    public static <T extends Serializable> Iterator<T> deserializeIterator(byte[] data) {
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(data);
+             ObjectInputStream ois = new ObjectInputStream(bais)) {
+            List<T> list = (List<T>) ois.readObject();
+            return list.iterator();
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException("Deserialization error", e);
+        }
+    }
+}
+```
+
+## 11. Вопросы для собеседования
+
+### Базовые вопросы
+
+1. **Объясните разницу между Iterator и Iterable**
+   - Iterable: интерфейс для объектов, которые можно перебирать
+   - Iterator: интерфейс для последовательного доступа к элементам
+   - Iterable предоставляет Iterator через метод iterator()
+
+2. **Что такое for-each и как он работает?**
+   - Синтаксический сахар для итерации
+   - Автоматически вызывает iterator() и использует Iterator
+   - Работает с любым объектом, реализующим Iterable
+
+3. **Объясните производительность Iterator**
+   - hasNext/next: O(1) для большинства коллекций
+   - remove: O(1) для ArrayList, O(n) для LinkedList
+   - Итерация: O(n) для всех коллекций
+
+### Продвинутые вопросы
+
+4. **Как работает внутренняя реализация Iterator?**
+   - Зависит от коллекции (индекс, указатель, итератор по корзинам)
+   - Отслеживает модификации через modCount
+   - Проверяет ConcurrentModificationException
+
+5. **Объясните многопоточность в Iterator**
+   - Iterator не потокобезопасен
+   - ConcurrentModificationException при модификации во время итерации
+   - ConcurrentHashMap не выбрасывает исключения
+
+6. **Как реализовать кастомный Iterator?**
+```java
+public class CustomIterator<T> implements Iterator<T> {
+    private final T[] data;
+    private int index = 0;
+    
+    public CustomIterator(T[] data) {
+        this.data = data;
+    }
+    
+    @Override
+    public boolean hasNext() {
+        return index < data.length;
+    }
+    
+    @Override
+    public T next() {
+        if (!hasNext()) throw new NoSuchElementException();
+        return data[index++];
+    }
+}
+```
+
+### Практические вопросы
+
+7. **Напишите код для безопасного удаления элементов**
+```java
+public static <T> void removeElements(Iterable<T> iterable, Predicate<T> predicate) {
+    Iterator<T> iterator = iterable.iterator();
+    while (iterator.hasNext()) {
+        if (predicate.test(iterator.next())) {
+            iterator.remove();
+        }
+    }
+}
+```
+
+8. **Реализуйте итератор для бесконечной последовательности**
+```java
+public static Iterator<Integer> infiniteIterator(int start) {
+    return new Iterator<Integer>() {
+        private int current = start;
+        
+        @Override
+        public boolean hasNext() {
+            return true;
+        }
+        
+        @Override
+        public Integer next() {
+            return current++;
+        }
+    };
+}
+```
+
+9. **Как объединить несколько итераторов?**
+```java
+public static <T> Iterator<T> combineIterators(Iterator<T>... iterators) {
+    return new Iterator<T>() {
+        private int currentIndex = 0;
+        
+        @Override
+        public boolean hasNext() {
+            while (currentIndex < iterators.length) {
+                if (iterators[currentIndex].hasNext()) {
+                    return true;
+                }
+                currentIndex++;
+            }
+            return false;
+        }
+        
+        @Override
+        public T next() {
+            if (!hasNext()) throw new NoSuchElementException();
+            return iterators[currentIndex].next();
+        }
+    };
+}
+```
+
+## 12. Пример: Комплексное использование
 
 ```java
 import java.util.*;
@@ -417,6 +877,12 @@ public class IteratorExample {
         Iterator<String> iterator2 = list.iterator();
         iterator2.next();
         iterator2.forEachRemaining(s -> LOGGER.info("forEachRemaining: " + s));
+        
+        // Кастомный итератор
+        Iterator<Integer> rangeIterator = CustomIterables.range(1, 5).iterator();
+        while (rangeIterator.hasNext()) {
+            LOGGER.info("Range: " + rangeIterator.next());
+        }
     }
 }
 ```
@@ -432,4 +898,8 @@ INFO: ConcurrentHashMap: X=1
 INFO: ConcurrentHashMap: Y=2
 INFO: ConcurrentHashMap: Z=3
 INFO: forEachRemaining: C
+INFO: Range: 1
+INFO: Range: 2
+INFO: Range: 3
+INFO: Range: 4
 ```
