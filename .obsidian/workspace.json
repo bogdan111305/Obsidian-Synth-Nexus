@@ -170,6 +170,8 @@
   },
   "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
+    "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/Аннотации @Transactional из Jakarta EE и Spring.md",
+    "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/CompanyRepository IT.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/TestContext.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/README.md",
@@ -196,8 +198,6 @@
     "Base/Java/Based/Условные операторы.md",
     "Base/Java/Based/Примитивные типы данных.md",
     "Base/Java/OOP/Enum.md",
-    "Base/Java/Java Static.md",
-    "Base/Java/Java Reflection API.md",
     "Base/Проекты",
     "Base/JDBC",
     "Base/Hibernate",
