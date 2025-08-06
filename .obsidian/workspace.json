@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
+                "file": "Base/Java/1. Основы/Based/Массивы.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Абстрактные классы"
+              "title": "Массивы"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
+                "file": "Base/Java/1. Основы/Based/Массивы.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Абстрактные классы"
+              "title": "Структура Массивы"
             }
           }
         ],
@@ -170,6 +170,7 @@
   },
   "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
+    "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
     "Base/Java/1. Основы/Based/Функции и методы.md",
     "Base/Java/1. Основы/Based/Переменные.md",
     "Base/Java/1. Основы/Based/Условные операторы.md",
@@ -195,7 +196,6 @@
     "Base/Java/Java Reflection API.md",
     "Base/Java/OOP/Наследование.md",
     "Base/JDBC/Пула Соединений с JDBC.md",
-    "Base/JDBC/Основы.md",
     "Base/Проекты",
     "Base/JDBC",
     "Base/Hibernate",
