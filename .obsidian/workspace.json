@@ -170,6 +170,8 @@
   },
   "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
+    "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Вынесение @Transactional в @IT.md",
+    "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Обработка checked exception.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Функционал TransactionTemplate.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings/Transaction propagation резюме.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration/Аннотация @Transactional и Cglib proxy.md",
@@ -199,8 +201,6 @@
     "Base/Hibernate/Primary keys. Embedded components.md",
     "Base/Hibernate/Mapping entity associations.md",
     "Base/Hibernate/Основы.md",
-    "Base/Hibernate/Event Listeners.md",
-    "Base/Hibernate/Mapping inheritance.md",
     "Base/Проекты",
     "Base/JDBC",
     "Base/Hibernate",
