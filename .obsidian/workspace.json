@@ -11,10 +11,14 @@
             "id": "defe7f8e8d3ceb56",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "Base/Java/1. Основы/Based/Массивы.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "Новая вкладка"
+              "title": "Массивы"
             }
           }
         ]
@@ -135,12 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
+                "file": "Base/Java/1. Основы/Based/Массивы.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура"
+              "title": "Структура Массивы"
             }
           }
         ],
@@ -158,7 +163,9 @@
       "daily-notes:Сегодняшняя заметка": false,
       "templates:Вставить шаблон": false,
       "command-palette:Открыть палитру команд": false,
-      "random-note:Открыть случайную заметку": false
+      "random-note:Открыть случайную заметку": false,
+      "obsidian-excalidraw-plugin:Create new drawing": false,
+      "cursor-bridge:Open in Cursor": false
     }
   },
   "active": "defe7f8e8d3ceb56",
