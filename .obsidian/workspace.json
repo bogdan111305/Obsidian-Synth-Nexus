@@ -170,6 +170,7 @@
   },
   "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
+    "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration/Как происходит обработка транзакций в proxy.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration/Класс TransactionAutoConfiguration.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/Аннотации @Commit и @Rollback.md",
@@ -198,7 +199,6 @@
     "Base/Java/Concurrent(java.util.concurrent)/ThreadPool, Future, Callable, Executors, CompletableFuture.md",
     "Base/Java/Based/Переменные.md",
     "Base/Java/Based/Циклы.md",
-    "Base/Java/Based/Функции и методы.md",
     "Base/Проекты",
     "Base/JDBC",
     "Base/Hibernate",
