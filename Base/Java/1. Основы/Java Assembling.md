@@ -71,15 +71,11 @@ java -Dfile.encoding=UTF-8 com.example.Main
 - `locals` — все локальные
 - `cont` — продолжить
 
-**Пример:**
 ```bash
 javac -g -d bin src/com/example/Main.java
 jdb -classpath bin -sourcepath src com.example.Main
 ```
-
----
-
-## 6. Архивы: `jar`
+## Архивы: `jar`
 
 - Создание и управление JAR-архивами
 
@@ -90,21 +86,16 @@ jdb -classpath bin -sourcepath src com.example.Main
 - `m` — файл манифеста
 - `-C <dir>` — сменить директорию
 
-**Пример:**
 ```bash
 jar cvf app.jar -C bin .
 # С манифестом:
 jar cvmf manifest.mf app.jar -C bin .
 ```
-
 **Манифест:**
 ```
 Main-Class: com.example.Main
 ```
-
----
-
-## 7. Анализ байт-кода: `javap`
+## Анализ байт-кода: `javap`
 
 - Показывает структуру класса, байт-код, методы
 
@@ -114,14 +105,10 @@ Main-Class: com.example.Main
 - `-classpath <path>`
 - `-verbose` — подробности
 
-**Пример:**
 ```bash
 javap -c -classpath calculator.jar com.example.Calculator
 ```
-
----
-
-## 8. Документация: `javadoc`
+## Документация: `javadoc`
 
 - Генерирует HTML-документацию из JavaDoc-комментариев
 
@@ -132,97 +119,15 @@ javap -c -classpath calculator.jar com.example.Calculator
 - `-author`
 - `-subpackages <pkg>`
 
-**Пример:**
 ```bash
 javadoc -d doc -charset utf-8 -sourcepath src -author -subpackages com.example
 ```
-
----
-
-## 9. Прочие утилиты JVM (1-2 предложения и пример)
+## Прочие утилиты JVM (1-2 предложения и пример)
 
 - `jps` — список JVM-процессов: `jps`
 - `jstat` — статистика памяти/GC: `jstat -gc <pid>`
 - `jstack` — стек вызовов: `jstack <pid>`
 - `jmap` — дамп памяти: `jmap -dump:file=heap.hprof <pid>`
-
----
-
-## 10. Подводные камни и лучшие практики
-
-### Частые ошибки
-- **ClassNotFoundException** — неверный classpath
-- **Кодировка** — используйте `-encoding UTF-8` в `javac`
-- **Нет отладочной информации** — компилируйте с `-g`
-- **JAR без манифеста** — проверьте `META-INF/MANIFEST.MF`
-- **JAVA_HOME/PATH** — проверьте переменные окружения
-
-### Лучшие практики
-- Используйте `-d` для отдельной папки с классами
-- Для сложных classpath — используйте переменные окружения или скрипты
-- Добавляйте отладочную информацию (`-g`)
-- Для больших проектов — автоматизация (`Maven`, `Gradle`)
-- Пишите JavaDoc-комментарии
-- Проверяйте байт-код с `javap -c`
-
----
-
-## 11. Пример полного рабочего процесса
-
-**Исходный код:**
-```java
-package com.example;
-public class Calculator {
-    public static void main(String[] args) {
-        Calculator calc = new Calculator();
-        System.out.println(calc.add(5, 3));
-    }
-    public int add(int a, int b) { return a + b; }
-}
-```
-
-**Шаги:**
-1. Компиляция:
-    ```bash
-    javac -g -d bin src/com/example/Calculator.java
-    ```
-2. Запуск:
-    ```bash
-    java -classpath bin com.example.Calculator
-    # Вывод: 8
-    ```
-3. Создание JAR:
-    ```bash
-    echo "Main-Class: com.example.Calculator" > manifest.mf
-    jar cvmf manifest.mf calculator.jar -C bin .
-    ```
-4. Запуск JAR:
-    ```bash
-    java -jar calculator.jar
-    # Вывод: 8
-    ```
-5. Отладка:
-    ```bash
-    jdb -classpath bin -sourcepath src com.example.Calculator
-    > stop at com.example.Calculator:9
-    > run
-    ```
-6. Дизассемблирование:
-    ```bash
-    javap -c -classpath calculator.jar com.example.Calculator
-    ```
-7. Генерация документации:
-    ```bash
-    javadoc -d doc -charset utf-8 -sourcepath src -author -subpackages com.example
-    ```
-
----
-
-> **Итого:**
-Знание командной строки Java и основных утилит (`javac`, `java`, `jdb`, `jar`, `javap`, `javadoc`) позволяет полностью контролировать жизненный цикл Java-программы, глубже понимать работу JVM и эффективно решать задачи даже без IDE.
-
----
-
 # Вопросы для собеседования по компиляции и сборке Java
 
 1. Как работает компиляция Java кода? Какие этапы включает?
