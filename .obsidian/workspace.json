@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/1. Основы/Based/Переменные.md",
+                "file": "Base/Java/1. Основы/Based/Примитивные типы данных.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Переменные"
+              "title": "Примитивные типы данных"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/1. Основы/Based/Переменные.md",
+                "file": "Base/Java/1. Основы/Based/Примитивные типы данных.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Переменные"
+              "title": "Структура Примитивные типы данных"
             }
           }
         ],
@@ -170,6 +170,7 @@
   },
   "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
+    "Base/Java/1. Основы/Based/Переменные.md",
     "Base/Java/1. Основы/Based/Массивы.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/CompanyRepository IT.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/Класс TransactionalTestExecutionListener.md",
@@ -194,7 +195,6 @@
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions",
     "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
     "Base/Java/1. Основы/Based/Функции и методы.md",
-    "Base/Java/1. Основы/Based/Переменные.md",
     "Base/Java/1. Основы/Based/Условные операторы.md",
     "Base/Java/1. Основы/Based/Примитивные типы данных.md",
     "Base/Java/1. Основы/Java Memory Structure.md",
