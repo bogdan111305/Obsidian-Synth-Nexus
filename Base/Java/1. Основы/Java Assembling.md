@@ -1,42 +1,29 @@
-# Java в командной строке: Краткое руководство
-
-> **Зачем это нужно?**
 Работа с Java через командную строку — фундаментальный навык для понимания процессов компиляции, запуска, отладки и упаковки приложений. Это полезно для:
+
 - Быстрой диагностики проблем
 - Автоматизации сборки
 - Глубокого понимания JVM
 - Работы на серверах без IDE
-
----
-
-## 1. Основные этапы работы с Java-программой
+## Основные этапы работы с Java-программой
 
 1. **Компиляция**: `.java` → `.class` (байт-код) с помощью `javac`
 2. **Запуск**: выполнение байт-кода в JVM с помощью `java`
 
-**Пример:**
 ```bash
 javac -d bin src/com/example/Main.java
 java -classpath bin com.example.Main
 ```
-
----
-
-## 2. Переменная `classpath`
+## Переменная `classpath`
 
 - Определяет, где JVM ищет классы и ресурсы
 - Может включать папки и JAR-файлы
 - Разделитель: `;` (Windows), `:` (Linux/macOS)
 
-**Пример:**
 ```bash
 java -classpath bin;lib/my-lib.jar com.example.Main
 ```
-> **Совет:** Если не указан, используется текущая директория (`.`)
-
----
-
-## 3. Компиляция: `javac`
+> Если не указан, используется текущая директория (`.`)
+## Компиляция: `javac`
 
 - Преобразует `.java` в `.class`
 - Создаёт AST, проверяет типы, генерирует байт-код
@@ -47,19 +34,16 @@ java -classpath bin;lib/my-lib.jar com.example.Main
 - `-g` — добавить отладочную информацию
 - `-Xlint` — включить предупреждения
 
-**Пример:**
 ```bash
 javac -d bin -classpath lib/my-lib.jar src/com/example/Main.java
 ```
 
-> **Процессоры аннотаций:**
+**Процессоры аннотаций:**
+
 ```bash
 javac -classpath lib/lombok.jar -processor lombok.launch.AnnotationProcessor src/Main.java
 ```
-
----
-
-## 4. Запуск: `java`
+## Запуск: `java`
 
 - Загружает классы, инициализирует, вызывает `main`
 
@@ -69,16 +53,12 @@ javac -classpath lib/lombok.jar -processor lombok.launch.AnnotationProcessor src
 - `-jar <jarfile>` — запуск JAR
 - `-Xms`, `-Xmx` — размер кучи
 
-**Пример:**
 ```bash
 java -classpath bin com.example.Main
 java -jar app.jar
 java -Dfile.encoding=UTF-8 com.example.Main
 ```
-
----
-
-## 5. Отладка: `jdb`
+## Отладка: `jdb`
 
 - Пошаговое выполнение, точки останова, просмотр переменных
 
