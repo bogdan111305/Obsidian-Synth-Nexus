@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/1. Основы/Based/Массивы.md",
+                "file": "Base/Java/1. Основы/Based/Переменные.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Массивы"
+              "title": "Переменные"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/1. Основы/Based/Массивы.md",
+                "file": "Base/Java/1. Основы/Based/Переменные.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Массивы"
+              "title": "Структура Переменные"
             }
           }
         ],
@@ -170,11 +170,11 @@
   },
   "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
+    "Base/Java/1. Основы/Based/Массивы.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/CompanyRepository IT.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/Класс TransactionalTestExecutionListener.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/Аннотации @Transactional из Jakarta EE и Spring.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/Аннотации @Commit и @Rollback.md",
-    "Base/Java/1. Основы/Based/Массивы.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Вынесение @Transactional в @IT.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Обработка checked exception.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Функционал TransactionTemplate.md",
