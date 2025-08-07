@@ -84,7 +84,8 @@ void foo() {
 - Когда метод завершён — frame удаляется (pop)
 ## Metaspace и хранение static
 
-**Metaspace** в Java — это область памяти, которая используется для хранения метаданных классов JVM (Java Virtual Machine). Она заменила PermGen (Permanent Generation) начиная с Java 8. 
+**Metaspace** в Java — это область памяти, которая используется для хранения метаданных классов JVM (Java Virtual Machine). Она заменила PermGen (Permanent Generation) начиная с Java 8. Что хранится в Metaspace:
+
 1. **Метаданные классов**:
     - Информация о структуре классов (имя, поля, методы, конструкторы).
     - Суперклассы и интерфейсы.
