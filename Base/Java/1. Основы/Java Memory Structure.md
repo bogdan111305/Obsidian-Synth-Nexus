@@ -147,36 +147,8 @@ public class Leaky {
 - Пока поток жив, его ThreadLocalMap живёт вместе с ним.
 - Если ThreadLocal не удалён, value остаётся достижимым через Thread → ThreadLocalMap → value.
 
-- **Всегда** вызывайте `threadLocal.remove()` после использования, особенно в пулах потоков.
-- Используйте try-finally:
-  ```java
-  try {
-      threadLocal.set(...);
-      // ... работа
-  } finally {
-      threadLocal.remove();
-  }
-  ```
-- Не храните большие объекты в ThreadLocal без крайней необходимости.
-- Для пула потоков используйте InheritableThreadLocal только если понимаете последствия.
-
-### 7.5. Пример с thread pool и утечкой
-```java
-private static final ThreadLocal<byte[]> buf = new ThreadLocal<>();
-ExecutorService pool = Executors.newFixedThreadPool(10);
-
-for (int i = 0; i < 1000; i++) {
-    pool.submit(() -> {
-        buf.set(new byte[1024 * 1024]); // 1MB на поток
-        // ...
-        // buf.remove(); // если забыть — утечка!
-    });
-}
-```
-- Если не вызвать `remove()`, каждый поток в пуле будет удерживать свой 1MB навсегда!
-
-### 7.6. Как избежать утечек
-- Всегда удаляйте значения после использования.
+**Всегда** вызывайте `threadLocal.remove()` после использования, особенно в пулах потоков.
+Всегда удаляйте значения после использования.
 - Не используйте ThreadLocal для хранения объектов, которые могут ссылаться на большие графы данных.
 - В современных фреймворках (Spring, сервера приложений) всегда проверяйте, что ThreadLocal очищается после запроса.
 
