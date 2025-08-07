@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/2. ООП и базовые конструкции/Java Static.md",
+                "file": "Base/Java/1. Основы/Java Memory Structure.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Java Static"
+              "title": "Java Memory Structure"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/2. ООП и базовые конструкции/Java Static.md",
+                "file": "Base/Java/1. Основы/Java Memory Structure.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Java Static"
+              "title": "Структура Java Memory Structure"
             }
           }
         ],
@@ -170,6 +170,7 @@
   },
   "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
+    "Base/Java/2. ООП и базовые конструкции/Java Static.md",
     "Base/Java/1. Основы/Java Memory Structure.md",
     "Base/Java/1. Основы/Java Assembling.md",
     "Base/Java/1. Основы/Based/Циклы.md",
@@ -200,7 +201,6 @@
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/README.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions",
     "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
-    "Base/Hibernate/Primary keys. Embedded components.md",
     "Base/Проекты",
     "Base/JDBC",
     "Base/Hibernate",
