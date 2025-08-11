@@ -170,6 +170,7 @@
   },
   "active": "a8434a1df3a0872e",
   "lastOpenFiles": [
+    "Base/Java/Конспект.md",
     "Base/Java/Конспект",
     "Base/Java/1. Основы/Based/Циклы.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Инициализация объектов с учётом наследования.md",
@@ -205,7 +206,6 @@
     "Base/JDBC",
     "Base/Hibernate",
     "Base/Grafana, Prometheus, OpenTelemetry и Jaeger",
-    "Base/Git",
     "Files/Pasted image 20250709124637.png",
     "Schemas/Spring core.canvas",
     "Schemas/Migrations Framework.canvas",
