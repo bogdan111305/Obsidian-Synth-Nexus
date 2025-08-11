@@ -168,8 +168,9 @@
       "cursor-bridge:Open in Cursor": false
     }
   },
-  "active": "defe7f8e8d3ceb56",
+  "active": "a8434a1df3a0872e",
   "lastOpenFiles": [
+    "Base/Java/Конспект",
     "Base/Java/1. Основы/Based/Циклы.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Инициализация объектов с учётом наследования.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Вложенные и внутренние классы, builder паттерн для инициализации объектов.md",
@@ -197,7 +198,6 @@
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings/Свойства @Transactional. transactionManager.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration/Как происходит обработка транзакций в proxy.md",
-    "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration/Класс TransactionAutoConfiguration.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions",
