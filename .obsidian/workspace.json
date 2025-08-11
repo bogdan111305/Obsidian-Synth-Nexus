@@ -44,7 +44,7 @@
                 "autoReveal": false
               },
               "icon": "lucide-folder-closed",
-              "title": "Файловый менеджер"
+              "title": "Files"
             }
           },
           {
@@ -145,7 +145,7 @@
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Инициализация объектов с учётом наследования"
+              "title": "Outline of Инициализация объектов с учётом наследования"
             }
           }
         ],
@@ -157,15 +157,13 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "switcher:Меню быстрого перехода": false,
-      "graph:Граф": false,
-      "canvas:Создать новый холст": false,
-      "daily-notes:Сегодняшняя заметка": false,
-      "templates:Вставить шаблон": false,
-      "command-palette:Открыть палитру команд": false,
-      "random-note:Открыть случайную заметку": false,
-      "obsidian-excalidraw-plugin:Create new drawing": false,
-      "cursor-bridge:Open in Cursor": false
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "random-note:Open random note": false
     }
   },
   "active": "defe7f8e8d3ceb56",
