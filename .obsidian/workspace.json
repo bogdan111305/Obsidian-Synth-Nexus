@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Инициализация объектов с учётом наследования.md",
+                "file": "Base/Java/1. Основы/Based/Циклы.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Инициализация объектов с учётом наследования"
+              "title": "Циклы"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Инициализация объектов с учётом наследования.md",
+                "file": "Base/Java/1. Основы/Based/Циклы.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Инициализация объектов с учётом наследования"
+              "title": "Outline of Циклы"
             }
           }
         ],
@@ -163,11 +163,14 @@
       "daily-notes:Open today's daily note": false,
       "templates:Insert template": false,
       "command-palette:Open command palette": false,
-      "random-note:Open random note": false
+      "random-note:Open random note": false,
+      "obsidian-excalidraw-plugin:Create new drawing": false,
+      "cursor-bridge:Open in Cursor": false
     }
   },
   "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
+    "Base/Java/2. ООП и базовые конструкции/OOP/Инициализация объектов с учётом наследования.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Вложенные и внутренние классы, builder паттерн для инициализации объектов.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
     "Base/Java/1. Основы/Java Memory Structure.md",
@@ -196,7 +199,6 @@
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration/Как происходит обработка транзакций в proxy.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration/Класс TransactionAutoConfiguration.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration",
-    "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/TestContext.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions",
     "Base/Проекты",
