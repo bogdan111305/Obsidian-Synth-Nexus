@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/1. Основы/Based/Функции и методы.md",
+                "file": "Base/Java/1. Основы/Java Memory Structure.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Функции и методы"
+              "title": "Java Memory Structure"
             }
           }
         ]
@@ -44,7 +44,7 @@
                 "autoReveal": false
               },
               "icon": "lucide-folder-closed",
-              "title": "Файловый менеджер"
+              "title": "Files"
             }
           },
           {
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/1. Основы/Based/Функции и методы.md",
+                "file": "Base/Java/1. Основы/Java Memory Structure.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Функции и методы"
+              "title": "Outline of Java Memory Structure"
             }
           }
         ],
@@ -157,26 +157,21 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "switcher:Меню быстрого перехода": false,
-      "graph:Граф": false,
-      "canvas:Создать новый холст": false,
-      "daily-notes:Сегодняшняя заметка": false,
-      "templates:Вставить шаблон": false,
-      "command-palette:Открыть палитру команд": false,
-      "random-note:Открыть случайную заметку": false,
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "random-note:Open random note": false,
       "obsidian-excalidraw-plugin:Create new drawing": false,
       "cursor-bridge:Open in Cursor": false
     }
   },
   "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
-    "Base/Java/1. Основы/Based/Условные операторы.md",
-    "Base/Java/1. Основы/Based/Переменные.md",
-    "Base/Java/1. Основы/Based/Примитивные типы данных.md",
-    "Base/Java/1. Основы/Based/Массивы.md",
-    "Base/Java/2. ООП и базовые конструкции/OOP/Приведение типов, widening conversion, narrowing conversion.md",
-    "Base/Java/Конспект.md",
     "Base/Java/1. Основы/Based/Циклы.md",
+    "Base/Java/Конспект.md",
     "conflict-files-obsidian-git.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Инициализация объектов с учётом наследования.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Вложенные и внутренние классы, builder паттерн для инициализации объектов.md",
@@ -185,6 +180,10 @@
     "Base/Java/2. ООП и базовые конструкции/Java Static.md",
     "Base/Java/1. Основы/Java Assembling.md",
     "Base/Java/1. Основы/Based/Функции и методы.md",
+    "Base/Java/1. Основы/Based/Условные операторы.md",
+    "Base/Java/1. Основы/Based/Массивы.md",
+    "Base/Java/1. Основы/Based/Переменные.md",
+    "Base/Java/1. Основы/Based/Примитивные типы данных.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/CompanyRepository IT.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/Класс TransactionalTestExecutionListener.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/Аннотации @Transactional из Jakarta EE и Spring.md",
@@ -197,6 +196,7 @@
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Свойства объекта TransactionTemplate.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings/Transaction propagation.md",
+    "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings/Свойства @Transactional. transactionManager.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional",
