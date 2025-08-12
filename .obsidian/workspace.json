@@ -13,15 +13,30 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/1. Основы/Based/Циклы.md",
+                "file": "Base/Java/1. Основы/Based/Переменные.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Циклы"
+              "title": "Переменные"
+            }
+          },
+          {
+            "id": "ea083b839efb9fc3",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "conflict-files-obsidian-git.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "conflict-files-obsidian-git"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -139,13 +154,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/1. Основы/Based/Циклы.md",
+                "file": "Base/Java/1. Основы/Based/Переменные.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Циклы"
+              "title": "Outline of Переменные"
             }
           }
         ],
@@ -168,15 +183,17 @@
       "cursor-bridge:Open in Cursor": false
     }
   },
-  "active": "defe7f8e8d3ceb56",
+  "active": "a8434a1df3a0872e",
   "lastOpenFiles": [
+    "Base/Java/Конспект.md",
+    "Base/Java/Конспект",
+    "Base/Java/1. Основы/Based/Циклы.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Инициализация объектов с учётом наследования.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Вложенные и внутренние классы, builder паттерн для инициализации объектов.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
     "Base/Java/1. Основы/Java Memory Structure.md",
     "Base/Java/2. ООП и базовые конструкции/Java Static.md",
     "Base/Java/1. Основы/Java Assembling.md",
-    "Base/Java/1. Основы/Based/Циклы.md",
     "Base/Java/1. Основы/Based/Функции и методы.md",
     "Base/Java/1. Основы/Based/Условные операторы.md",
     "Base/Java/1. Основы/Based/Массивы.md",
@@ -197,7 +214,6 @@
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings/Свойства @Transactional. transactionManager.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration/Как происходит обработка транзакций в proxy.md",
-    "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration/Класс TransactionAutoConfiguration.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions",
@@ -205,7 +221,6 @@
     "Base/JDBC",
     "Base/Hibernate",
     "Base/Grafana, Prometheus, OpenTelemetry и Jaeger",
-    "Base/Git",
     "Files/Pasted image 20250709124637.png",
     "Schemas/Spring core.canvas",
     "Schemas/Migrations Framework.canvas",
