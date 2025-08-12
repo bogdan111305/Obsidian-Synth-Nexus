@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Приведение типов, widening conversion, narrowing conversion.md",
+                "file": "Base/Java/1. Основы/Based/Примитивные типы данных.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Приведение типов, widening conversion, narrowing conversion"
+              "title": "Примитивные типы данных"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Приведение типов, widening conversion, narrowing conversion.md",
+                "file": "Base/Java/1. Основы/Based/Примитивные типы данных.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Приведение типов, widening conversion, narrowing conversion"
+              "title": "Структура Примитивные типы данных"
             }
           }
         ],
@@ -170,9 +170,10 @@
   },
   "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
-    "Base/Java/1. Основы/Based/Примитивные типы данных.md",
     "Base/Java/1. Основы/Based/Переменные.md",
     "Base/Java/1. Основы/Based/Массивы.md",
+    "Base/Java/2. ООП и базовые конструкции/OOP/Приведение типов, widening conversion, narrowing conversion.md",
+    "Base/Java/1. Основы/Based/Примитивные типы данных.md",
     "Base/Java/Конспект.md",
     "Base/Java/1. Основы/Based/Условные операторы.md",
     "Base/Java/1. Основы/Based/Циклы.md",
@@ -196,7 +197,6 @@
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Свойства объекта TransactionTemplate.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings/Transaction propagation.md",
-    "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings/Свойства @Transactional. transactionManager.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional",
