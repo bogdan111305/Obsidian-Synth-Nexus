@@ -35,8 +35,7 @@
               "title": "Конспект"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -154,13 +153,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/Конспект.md",
+                "file": "Base/Java/1. Основы/Based/Примитивные типы данных.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Конспект"
+              "title": "Структура Примитивные типы данных"
             }
           }
         ],
@@ -183,10 +182,10 @@
       "cursor-bridge:Open in Cursor": false
     }
   },
-  "active": "8bb7c20b137b2a20",
+  "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
-    "Base/Java/1. Основы/Based/Примитивные типы данных.md",
     "Base/Java/Конспект.md",
+    "Base/Java/1. Основы/Based/Примитивные типы данных.md",
     "Base/Java/1. Основы/Based/Циклы.md",
     "conflict-files-obsidian-git.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Инициализация объектов с учётом наследования.md",
