@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/Конспект.md",
+                "file": "Base/Java/1. Основы/Based/Примитивные типы данных.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Конспект"
+              "title": "Примитивные типы данных"
             }
           }
         ]
@@ -44,7 +44,7 @@
                 "autoReveal": false
               },
               "icon": "lucide-folder-closed",
-              "title": "Files"
+              "title": "Файловый менеджер"
             }
           },
           {
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/Конспект.md",
+                "file": "Base/Java/1. Основы/Based/Примитивные типы данных.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Конспект"
+              "title": "Структура Примитивные типы данных"
             }
           }
         ],
@@ -157,22 +157,22 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "switcher:Open quick switcher": false,
-      "graph:Open graph view": false,
-      "canvas:Create new canvas": false,
-      "daily-notes:Open today's daily note": false,
-      "templates:Insert template": false,
-      "command-palette:Open command palette": false,
-      "random-note:Open random note": false,
+      "switcher:Меню быстрого перехода": false,
+      "graph:Граф": false,
+      "canvas:Создать новый холст": false,
+      "daily-notes:Сегодняшняя заметка": false,
+      "templates:Вставить шаблон": false,
+      "command-palette:Открыть палитру команд": false,
+      "random-note:Открыть случайную заметку": false,
       "obsidian-excalidraw-plugin:Create new drawing": false,
       "cursor-bridge:Open in Cursor": false
     }
   },
   "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
+    "Base/Java/Конспект.md",
     "Base/Java/1. Основы/Based/Циклы.md",
     "conflict-files-obsidian-git.md",
-    "Base/Java/Конспект.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Инициализация объектов с учётом наследования.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Вложенные и внутренние классы, builder паттерн для инициализации объектов.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
