@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/Конспект.md",
+                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Приведение типов, widening conversion, narrowing conversion.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Конспект"
+              "title": "Приведение типов, widening conversion, narrowing conversion"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/Конспект.md",
+                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Приведение типов, widening conversion, narrowing conversion.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Конспект"
+              "title": "Структура Приведение типов, widening conversion, narrowing conversion"
             }
           }
         ],
@@ -171,8 +171,9 @@
   "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
     "Base/Java/1. Основы/Based/Примитивные типы данных.md",
-    "Base/Java/Конспект.md",
     "Base/Java/1. Основы/Based/Переменные.md",
+    "Base/Java/1. Основы/Based/Массивы.md",
+    "Base/Java/Конспект.md",
     "Base/Java/1. Основы/Based/Условные операторы.md",
     "Base/Java/1. Основы/Based/Циклы.md",
     "conflict-files-obsidian-git.md",
@@ -183,7 +184,6 @@
     "Base/Java/2. ООП и базовые конструкции/Java Static.md",
     "Base/Java/1. Основы/Java Assembling.md",
     "Base/Java/1. Основы/Based/Функции и методы.md",
-    "Base/Java/1. Основы/Based/Массивы.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/CompanyRepository IT.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/Класс TransactionalTestExecutionListener.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/Аннотации @Transactional из Jakarta EE и Spring.md",
