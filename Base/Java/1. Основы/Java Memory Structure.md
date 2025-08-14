@@ -137,9 +137,40 @@ public int factorial(int n) {
 
 ### Где находятся значения static-полей
 
-- Значения static‑полей находятся в Heap как часть объекта `java.lang.Class` (class mirror).
-- Метаданные самих полей (имя, тип, модификаторы) — в Metaspace.
-- Ссылки из static‑полей удерживают объекты достижимыми через GC Roots.
+**Важное разделение: метаданные vs значения**
+
+- **Метаданные static-полей** (имя поля, тип, модификаторы `public static final`) хранятся в **Metaspace**
+- **Значения static-полей** хранятся в **Heap** как часть объекта `java.lang.Class` (class mirror)
+
+**Как это работает:**
+```java
+public class MyClass {
+    public static String name = "Example";           // значение "Example" → Heap
+    public static List<String> cache = new ArrayList<>(); // объект ArrayList → Heap
+    public static final int MAX = 100;              // значение 100 → Heap (в Class объекте)
+}
+```
+
+**Class Mirror в Heap:**
+- Для каждого загруженного класса JVM создает объект типа `java.lang.Class` в Heap
+- Этот объект содержит значения всех static-полей класса
+- Получить доступ: `MyClass.class` или `Class.forName("MyClass")`
+
+**Почему static-поля — GC Roots:**
+- Static-поля доступны через Class объект → Class объект достижим → static-поля достижимы
+- Объекты, на которые ссылаются static-поля, не могут быть удалены GC
+- Поэтому static-коллекции часто становятся источником memory leaks
+
+**Пример утечки:**
+```java
+public class Cache {
+    private static Map<String, Object> data = new HashMap<>(); // GC Root!
+    
+    public static void put(String key, Object value) {
+        data.put(key, value); // объекты в cache никогда не удалятся
+    }
+}
+```
 ### Особенности Metaspace:
 
 - **Динамическое управление**: В отличие от PermGen, Metaspace автоматически расширяется (ограничено только доступной оперативной памятью).
