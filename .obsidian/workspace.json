@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/1. Основы/Java Memory Structure.md",
+                "file": "Base/Java/1. Основы/Based/Массивы.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Java Memory Structure"
+              "title": "Массивы"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/1. Основы/Java Memory Structure.md",
+                "file": "Base/Java/1. Основы/Based/Массивы.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Java Memory Structure"
+              "title": "Outline of Массивы"
             }
           }
         ],
@@ -170,9 +170,9 @@
   },
   "active": "defe7f8e8d3ceb56",
   "lastOpenFiles": [
+    "Base/Java/1. Основы/Java Memory Structure.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/CyclicBarrier.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/CAS и Unsafe.md",
-    "Base/Java/1. Основы/Java Memory Structure.md",
     "Base/Java/1. Основы/Java Assembling.md",
     "Base/Java/1. Основы/Based/Циклы.md",
     "Base/Java/Конспект.md",
