@@ -223,7 +223,6 @@ System.out.println(color.getHexCode()); // #FF0000
 
 Каждый элемент `enum` может предоставлять свою реализацию абстрактного метода.
 
-**Пример**:
 ```java
 public enum Operation {
     PLUS {
@@ -257,8 +256,7 @@ System.out.println(op.apply(5, 3)); // 8.0
   .field public static final enum LOperation; MINUS
   .method public abstract apply(DD)D
 ```
-
-## 7. Методы `values()` и `valueOf()`
+## Методы `values()` и `valueOf()`
 
 - **`values()`**:
   - Возвращает копию массива всех констант (`VALUES.clone()`).
@@ -267,7 +265,6 @@ System.out.println(op.apply(5, 3)); // 8.0
   - Вызывает `Enum.valueOf(Class<T>, String)` через рефлексию.
   - Бросает `IllegalArgumentException`, если имя не найдено.
 
-**Пример**:
 ```java
 for (Day day : Day.values()) {
     System.out.println(day.name() + ": " + day.ordinal());
@@ -279,8 +276,7 @@ for (Day day : Day.values()) {
 Day day = Day.valueOf("MONDAY");
 System.out.println(day); // MONDAY
 ```
-
-## 8. Таблица характеристик `enum`
+## Таблица характеристик `enum`
 
 | Что                 | Как реализовано в enum                                   |
 |---------------------|---------------------------------------------------------|
@@ -291,13 +287,10 @@ System.out.println(day); // MONDAY
 | Хранение            | В куче, как объекты, с классом, загруженным в метаспейсе |
 | `values()`          | Возвращает копию массива всех элементов                  |
 | `valueOf()`         | Поиск по имени через `Enum.valueOf`                      |
-
-## 9. Использование в конструкциях
-
-### 9.1. Switch
+## Использование в конструкциях
+### Switch
 Перечисления идеальны для `switch`, особенно с pattern matching (Java 17+).
 
-**Пример**:
 ```java
 public String describeDay(Day day) {
     return switch (day) {
@@ -306,12 +299,11 @@ public String describeDay(Day day) {
     };
 }
 ```
-
-### 9.2. Коллекции: `EnumSet` и `EnumMap`
+### Коллекции: `EnumSet` и `EnumMap`
 
 Перечисления часто используются с `EnumSet` и `EnumMap`, которые оптимизированы для работы с `enum`.
+#### `EnumSet`
 
-#### 9.2.1. `EnumSet`
 `EnumSet` — это специализированное множество, использующее битовую карту для хранения элементов `enum`. Оно быстрее и компактнее, чем `HashSet`, благодаря фиксированному числу элементов `enum`.
 
 **Особенности**:
@@ -320,7 +312,6 @@ public String describeDay(Day day) {
 - **Память**: Очень компактно (1 бит на элемент).
 - **Потокобезопасность**: Не потокобезопасен, требует синхронизации для многопоточной работы.
 
-**Пример**:
 ```java
 import java.util.*;
 
