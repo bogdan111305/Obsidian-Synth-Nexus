@@ -347,8 +347,7 @@ System.out.println(weekdays); // [MONDAY, TUESDAY, WEDNESDAY]
 ```java
 invokestatic java/util/EnumSet/of(Ljava/lang/Enum;)Ljava/util/EnumSet;
 ```
-
-#### 9.2.2. `EnumMap`
+#### `EnumMap`
 `EnumMap` — это специализированная карта, где ключи — элементы `enum`. Она быстрее и компактнее, чем `HashMap`, благодаря использованию массива, индексированного `ordinal`.
 
 **Особенности**:
@@ -357,7 +356,6 @@ invokestatic java/util/EnumSet/of(Ljava/lang/Enum;)Ljava/util/EnumSet;
 - **Память**: Компактнее `HashMap` (нет узлов, только массив).
 - **Потокобезопасность**: Не потокобезопасен, требует синхронизации.
 
-**Пример**:
 ```java
 import java.util.*;
 
@@ -391,8 +389,7 @@ descriptions.forEach((day, desc) -> System.out.println(day + ": " + desc));
 ```java
 invokevirtual java/util/EnumMap/put(Ljava/lang/Enum;Ljava/lang/Object;)Ljava/lang/Object;
 ```
-
-#### 9.2.3. Примеры использования `EnumSet` и `EnumMap`
+#### Примеры использования `EnumSet` и `EnumMap`
 
 **Фильтрация рабочих дней**:
 ```java
@@ -410,8 +407,8 @@ hoursWorked.put(Day.TUESDAY, 7);
 int totalHours = hoursWorked.values().stream().mapToInt(Integer::intValue).sum();
 System.out.println("Всего часов: " + totalHours); // Всего часов: 15
 ```
+#### Подводные камни коллекций
 
-#### 9.2.4. Подводные камни коллекций
 - **Потокобезопасность**: `EnumSet` и `EnumMap` не потокобезопасны. Используйте `Collections.synchronizedSet`/`Map` или `ConcurrentHashMap`.
   ```java
   Set<Day> syncSet = Collections.synchronizedSet(EnumSet.of(Day.MONDAY));
@@ -420,8 +417,7 @@ System.out.println("Всего часов: " + totalHours); // Всего час
   - **Решение**: Используйте итераторы или стримы.
 - **Ограничение ключей**: `EnumMap` принимает только `enum` в качестве ключей.
 - **Пустой `EnumSet`**: Используйте `EnumSet.noneOf(Day.class)` вместо `new EnumSet<>()`.
-
-## 10. Внутренняя реализация в JVM
+## Внутренняя реализация в JVM
 
 - **Хранилище**:
   - Константы: `static final` экземпляры в Metaspace.
