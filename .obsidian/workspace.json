@@ -135,13 +135,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Scala/02_Основы/выражения_и_блоки.md",
+                "file": "Base/Java/Scala.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура выражения_и_блоки"
+              "title": "Структура Scala"
             }
           }
         ],
@@ -167,6 +167,8 @@
   },
   "active": "a8434a1df3a0872e",
   "lastOpenFiles": [
+    "Base/Scala/02_Основы/выражения_и_блоки.md",
+    "Base/Java/Scala.md",
     "Base/Scala/19_Ресурсы",
     "Base/Scala/18_Собеседование",
     "Base/Scala/17_Best_Practices",
@@ -177,7 +179,6 @@
     "Base/Scala/12_Java_интеграция",
     "Base/Scala/11_Тестирование",
     "Base/Scala/10_IO",
-    "Base/Scala/09_Конкурентность",
     "Base/Scala/README.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Enum.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
@@ -202,7 +203,6 @@
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Вынесение @Transactional в @IT.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Обработка checked exception.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Функционал TransactionTemplate.md",
-    "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings/Transaction propagation резюме.md",
     "Files/Pasted image 20250709124637.png",
     "Schemas/Spring core.canvas",
     "Schemas/Migrations Framework.canvas",
