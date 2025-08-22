@@ -169,8 +169,9 @@
       "cursor-bridge:Open in Cursor": false
     }
   },
-  "active": "defe7f8e8d3ceb56",
+  "active": "a8434a1df3a0872e",
   "lastOpenFiles": [
+    "Base/Scala/README.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Enum.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
     "Base/Java/1. Основы/Java Memory Structure.md",
@@ -196,7 +197,6 @@
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Функционал TransactionTemplate.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings/Transaction propagation резюме.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration/Аннотация @Transactional и Cglib proxy.md",
-    "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Свойства объекта TransactionTemplate.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional Settings",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/TransactionAutoConfiguration",
