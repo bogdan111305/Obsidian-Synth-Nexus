@@ -11,10 +11,14 @@
             "id": "e8bb1ceca983aba2",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "Base/Проекты/Корпоративная социальная сеть - микросервисная архитектура, выбор языка и идеи для вовлечённости.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "Новая вкладка"
+              "title": "Корпоративная социальная сеть - микросервисная архитектура, выбор языка и идеи для вовлечённости"
             }
           }
         ]
@@ -135,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/Scala.md",
+                "file": "Base/Проекты/Корпоративная социальная сеть - микросервисная архитектура, выбор языка и идеи для вовлечённости.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Scala"
+              "title": "Структура Корпоративная социальная сеть - микросервисная архитектура, выбор языка и идеи для вовлечённости"
             }
           }
         ],
@@ -165,10 +169,12 @@
       "cursor-bridge:Open in Cursor": false
     }
   },
-  "active": "a8434a1df3a0872e",
+  "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
-    "Base/Scala/02_Основы/выражения_и_блоки.md",
+    "Base/Hibernate/9. DAO & Repository/DAO & Repository. CRUD.md",
     "Base/Java/Scala.md",
+    "Base/Scala",
+    "Base/Scala/02_Основы/выражения_и_блоки.md",
     "Base/Scala/19_Ресурсы",
     "Base/Scala/18_Собеседование",
     "Base/Scala/17_Best_Practices",
@@ -178,7 +184,6 @@
     "Base/Scala/13_Инструменты",
     "Base/Scala/12_Java_интеграция",
     "Base/Scala/11_Тестирование",
-    "Base/Scala/10_IO",
     "Base/Scala/README.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Enum.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
@@ -202,7 +207,6 @@
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/@Transactional/Аннотации @Commit и @Rollback.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Вынесение @Transactional в @IT.md",
     "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Обработка checked exception.md",
-    "Base/Spring/4. Spring Data и кэширование/Data JPA Transactions/Manual Transactions/Функционал TransactionTemplate.md",
     "Files/Pasted image 20250709124637.png",
     "Schemas/Spring core.canvas",
     "Schemas/Migrations Framework.canvas",
