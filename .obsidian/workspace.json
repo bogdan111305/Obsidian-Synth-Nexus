@@ -20,8 +20,21 @@
               "icon": "lucide-file",
               "title": "Интерфейс Map"
             }
+          },
+          {
+            "id": "fb40bfc44a8f289e",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.9.12"
+              },
+              "icon": "lucide-book-up",
+              "title": "примечания к выпуску 1.9.12"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -139,13 +152,12 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс Map.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Интерфейс Map"
+              "title": "Структура"
             }
           }
         ],
@@ -169,7 +181,7 @@
       "cursor-bridge:Open in Cursor": false
     }
   },
-  "active": "e8bb1ceca983aba2",
+  "active": "fb40bfc44a8f289e",
   "lastOpenFiles": [
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс List.md",
     "Base/Java/9. Многопоточность/Threads/Процессы и Потоки, Thread, Runnable, состояния потоков.md",
