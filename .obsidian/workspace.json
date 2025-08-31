@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс List.md",
+                "file": "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс Map.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Интерфейс List"
+              "title": "Интерфейс Map"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс List.md",
+                "file": "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс Map.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Интерфейс List"
+              "title": "Структура Интерфейс Map"
             }
           }
         ],
@@ -171,9 +171,9 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс List.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Общая иерархия коллекций.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейсы Iterator и Iterable.md",
-    "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс List.md",
     "Base/Java/2. ООП и базовые конструкции/Java Static.md",
     "Base/Java/2. ООП и базовые конструкции/Java Generic.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Enum.md",
