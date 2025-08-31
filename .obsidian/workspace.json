@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/1. Основы/Java Memory Structure.md",
+                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Java Memory Structure"
+              "title": "Абстрактные классы"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/1. Основы/Java Memory Structure.md",
+                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Java Memory Structure"
+              "title": "Структура Абстрактные классы"
             }
           }
         ],
@@ -171,6 +171,7 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Java/1. Основы/Java Memory Structure.md",
     "Base/Java/1. Основы/Based/Массивы.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс Map.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс List.md",
@@ -192,7 +193,6 @@
     "Base/Scala/11_Тестирование",
     "Base/Scala/README.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Абстрактные классы.md",
-    "Base/Java/1. Основы/Java Memory Structure.md",
     "conflict-files-obsidian-git.md",
     "Base/Java/1. Основы/Based/Функции и методы.md",
     "Base/Java/1. Основы/Based/Условные операторы.md",
