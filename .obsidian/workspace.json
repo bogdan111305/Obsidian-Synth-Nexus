@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Класс Object.md",
+                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Наследование.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Класс Object"
+              "title": "Наследование"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Класс Object.md",
+                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Наследование.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Класс Object"
+              "title": "Структура Наследование"
             }
           }
         ],
@@ -171,6 +171,7 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Java/2. ООП и базовые конструкции/OOP/Класс Object.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Интерфейсы.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Инкапсуляция.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Инициализация объектов с учётом наследования.md",
@@ -206,7 +207,6 @@
     "Base/Java/Конспект.md",
     "Base/Java/1. Основы/Based/Циклы.md",
     "Base/Java/2. ООП и базовые конструкции/Java Static.md",
-    "Base/Java/1. Основы/Java Assembling.md",
     "Files/Pasted image 20250709124637.png",
     "Schemas/Spring core.canvas",
     "Schemas/Migrations Framework.canvas",
