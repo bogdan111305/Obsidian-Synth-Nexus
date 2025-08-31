@@ -136,8 +136,6 @@ System.out.println(p1.equals(p2)); // true
     - Хэш-код должен быть консистентным при многократных вызовах.
 - **По умолчанию**: Основан на адресе объекта в памяти.
 
-**Пример**:
-
 ```java
 public class Person {
     private String name;
@@ -182,8 +180,6 @@ System.out.println(p1.hashCode() == p2.hashCode()); // true
 - **Особенности**:
     - Не переопределяется (метод `final`).
     - Используется в рефлексии и сравнении типов.
-
-**Пример**:
 
 ```java
 Object obj = new String("Привет");
