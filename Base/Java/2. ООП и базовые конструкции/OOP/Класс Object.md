@@ -200,8 +200,6 @@ if (obj == null || getClass() != obj.getClass()) return false;
     - Поверхностное копирование копирует ссылки на объекты.
     - Для глубокого копирования требуется дополнительная логика.
 
-**Пример**:
-
 ```java
 public class Person implements Cloneable {
     private String name;
