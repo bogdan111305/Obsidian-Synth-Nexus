@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/3. Коллекции и работа с данными/Java Stream API.md",
+                "file": "Base/Java/4. Работа со строками/Java String, StringBuilder, StringBuffer, StringJoiner, String.format, Текстовые блоки и регулярные выражения в Java.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Java Stream API"
+              "title": "Java String, StringBuilder, StringBuffer, StringJoiner, String.format, Текстовые блоки и регулярные выражения в Java"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/3. Коллекции и работа с данными/Java Stream API.md",
+                "file": "Base/Java/4. Работа со строками/Java String, StringBuilder, StringBuffer, StringJoiner, String.format, Текстовые блоки и регулярные выражения в Java.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Java Stream API"
+              "title": "Структура Java String, StringBuilder, StringBuffer, StringJoiner, String.format, Текстовые блоки и регулярные выражения в Java"
             }
           }
         ],
@@ -171,6 +171,7 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Java/3. Коллекции и работа с данными/Java Stream API.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс Set.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс Map.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс List.md",
@@ -206,7 +207,6 @@
     "Base/Scala/13_Инструменты",
     "Base/Scala/12_Java_интеграция",
     "Base/Scala/11_Тестирование",
-    "Base/Scala/README.md",
     "Files/Pasted image 20250709124637.png",
     "Schemas/Spring core.canvas",
     "Schemas/Migrations Framework.canvas",
