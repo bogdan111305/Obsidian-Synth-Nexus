@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Наследование.md",
+                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Общее, поля, композиция классов, конструкторы, this, инициализаторы, модификаторы доступа, пакеты и импорты.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Наследование"
+              "title": "Общее, поля, композиция классов, конструкторы, this, инициализаторы, модификаторы доступа, пакеты и импорты"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Наследование.md",
+                "file": "Base/Java/2. ООП и базовые конструкции/OOP/Общее, поля, композиция классов, конструкторы, this, инициализаторы, модификаторы доступа, пакеты и импорты.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Наследование"
+              "title": "Структура Общее, поля, композиция классов, конструкторы, this, инициализаторы, модификаторы доступа, пакеты и импорты"
             }
           }
         ],
@@ -171,6 +171,7 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Java/2. ООП и базовые конструкции/OOP/Наследование.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Класс Object.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Интерфейсы.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Инкапсуляция.md",
@@ -206,7 +207,6 @@
     "Base/Java/2. ООП и базовые конструкции/OOP/Приведение типов, widening conversion, narrowing conversion.md",
     "Base/Java/Конспект.md",
     "Base/Java/1. Основы/Based/Циклы.md",
-    "Base/Java/2. ООП и базовые конструкции/Java Static.md",
     "Files/Pasted image 20250709124637.png",
     "Schemas/Spring core.canvas",
     "Schemas/Migrations Framework.canvas",
