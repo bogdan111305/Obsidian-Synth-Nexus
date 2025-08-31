@@ -95,8 +95,6 @@ System.out.println(person); // Выведет: Person{name='Алиса', age=25}
     - Консистентность: Многократные вызовы `x.equals(y)` дают одинаковый результат.
     - Сравнение с `null`: `x.equals(null)` → `false`.
 
-**Пример**:
-
 ```java
 public class Person {
     private String name;
