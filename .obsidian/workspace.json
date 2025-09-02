@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/ThreadPool, Future, Callable, Executors, CompletableFuture.md",
+                "file": "Base/Hibernate/4. N + 1 выборок в Hibernate/Лучшие практики.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "ThreadPool, Future, Callable, Executors, CompletableFuture"
+              "title": "Лучшие практики"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/ThreadPool, Future, Callable, Executors, CompletableFuture.md",
+                "file": "Base/Hibernate/4. N + 1 выборок в Hibernate/Лучшие практики.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура ThreadPool, Future, Callable, Executors, CompletableFuture"
+              "title": "Структура Лучшие практики"
             }
           }
         ],
@@ -171,6 +171,8 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Hibernate/1. Основы/Основы.md",
+    "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/ThreadPool, Future, Callable, Executors, CompletableFuture.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/CyclicBarrier.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/Semaphore.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/Phaser.md",
@@ -195,8 +197,6 @@
     "Base/Java/3. Коллекции и работа с данными/Collections/Общая иерархия коллекций.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейсы Iterator и Iterable.md",
     "Base/Java/2. ООП и базовые конструкции/Java Static.md",
-    "Base/Java/2. ООП и базовые конструкции/Java Generic.md",
-    "Base/Java/2. ООП и базовые конструкции/OOP/Enum.md",
     "Base/Scala",
     "Base/Scala/19_Ресурсы",
     "Base/Scala/18_Собеседование",
