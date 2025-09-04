@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/1. Основы/Модель памяти Java (JMM) и барьеры памяти.md",
+                "file": "Base/Java/1. Основы/Java Memory Structure.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Модель памяти Java (JMM) и барьеры памяти"
+              "title": "Java Memory Structure"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/1. Основы/Модель памяти Java (JMM) и барьеры памяти.md",
+                "file": "Base/Java/1. Основы/Java Memory Structure.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Модель памяти Java (JMM) и барьеры памяти"
+              "title": "Структура Java Memory Structure"
             }
           }
         ],
@@ -171,8 +171,8 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
-    "Base/Hibernate/4. N + 1 выборок в Hibernate/Лучшие практики.md",
     "Base/Java/1. Основы/Модель памяти Java (JMM) и барьеры памяти.md",
+    "Base/Hibernate/4. N + 1 выборок в Hibernate/Лучшие практики.md",
     "Base/Hibernate/1. Основы/Основы.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/ThreadPool, Future, Callable, Executors, CompletableFuture.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/CyclicBarrier.md",
