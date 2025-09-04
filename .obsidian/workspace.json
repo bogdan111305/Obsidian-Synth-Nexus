@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Spring/2. Продвинутые темы Spring/2.1 BeanPostProcessor/BeanFactoryPostProcessor.md",
+                "file": "Base/Spring/2. Продвинутые темы Spring/2.1 BeanPostProcessor/BeanPostProcessor.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "BeanFactoryPostProcessor"
+              "title": "BeanPostProcessor"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Spring/2. Продвинутые темы Spring/2.1 BeanPostProcessor/BeanFactoryPostProcessor.md",
+                "file": "Base/Spring/2. Продвинутые темы Spring/2.1 BeanPostProcessor/BeanPostProcessor.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура BeanFactoryPostProcessor"
+              "title": "Структура BeanPostProcessor"
             }
           }
         ],
@@ -171,8 +171,8 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
-    "Base/Spring/2. Продвинутые темы Spring/2.1 BeanPostProcessor/Lifecycle Callbacks.md",
     "Base/Spring/2. Продвинутые темы Spring/2.1 BeanPostProcessor/BeanFactoryPostProcessor.md",
+    "Base/Spring/2. Продвинутые темы Spring/2.1 BeanPostProcessor/Lifecycle Callbacks.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Bean Lifecycle.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring IoC.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring Core - IoC и DI.md",
