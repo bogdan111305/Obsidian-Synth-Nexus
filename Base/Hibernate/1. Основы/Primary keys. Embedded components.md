@@ -246,15 +246,15 @@ em.close();
 
 ## <a name="strategies"></a>Стратегии генерации ключей
 
-IDENTITY strategy
+*IDENTITY strategy*
 
 Стратегия `IDENTITY` использует автоинкрементный столбец базы данных, такой как `SERIAL` в PostgreSQL.
 
-SEQUENCE strategy
+*SEQUENCE strategy*
 
 Стратегия `SEQUENCE` использует последовательности базы данных (например, `CREATE SEQUENCE` в PostgreSQL) для генерации ключей.
 
-### <a name="table-strategy"></a>TABLE strategy
+*TABLE strategy*
 
 Стратегия `TABLE` использует отдельную таблицу в базе данных для хранения и генерации ключей.
 
