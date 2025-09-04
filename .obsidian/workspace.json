@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring Core - IoC и DI.md",
+                "file": "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring IoC.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Spring Core - IoC и DI"
+              "title": "Spring IoC"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring Core - IoC и DI.md",
+                "file": "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring IoC.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Spring Core - IoC и DI"
+              "title": "Структура Spring IoC"
             }
           }
         ],
@@ -171,6 +171,7 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring Core - IoC и DI.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Bean Lifecycle.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring IoC.md",
     "Base/Hibernate/4. N + 1 выборок в Hibernate/Лучшие практики.md",
@@ -187,7 +188,6 @@
     "Base/Kafka/Установка и настройка Kafka.md",
     "Base/Kafka/Первые шаги с Kafka.md",
     "Base/Hibernate/5. Transactions & Locks/JPA Transactions.md",
-    "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring Core - IoC и DI.md",
     "Base/Spring/1. Основы Spring/1.4 Spring Boot/Spring Boot.md",
     "Base/Spring/1. Основы Spring/1.3 Конфигурация/Spring Configuration.md",
     "Base/Spring/4. Spring Data/Data JPA Repositories/10. Custom Repository Implementation/Custom Repository Implementation.md",
