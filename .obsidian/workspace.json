@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/9. Многопоточность/Threads/Процессы и Потоки, Thread, Runnable, состояния потоков.md",
+                "file": "Base/Java/9. Многопоточность/Threads/Прерывание потока в Java.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Процессы и Потоки, Thread, Runnable, состояния потоков"
+              "title": "Прерывание потока в Java"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/9. Многопоточность/Threads/Процессы и Потоки, Thread, Runnable, состояния потоков.md",
+                "file": "Base/Java/9. Многопоточность/Threads/Прерывание потока в Java.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Процессы и Потоки, Thread, Runnable, состояния потоков"
+              "title": "Структура Прерывание потока в Java"
             }
           }
         ],
@@ -171,6 +171,7 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Java/9. Многопоточность/Threads/Процессы и Потоки, Thread, Runnable, состояния потоков.md",
     "Base/Java/9. Многопоточность/Threads/Атомарность операций и Volatile.md",
     "Base/Java/9. Многопоточность/Threads/Прерывание потока в Java.md",
     "Base/Java/7. Исключения/Java Exceptions.md",
@@ -191,7 +192,6 @@
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/Atomic.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/CAS и Unsafe.md",
     "Base/Java/9. Многопоточность/Threads/Synchronized.md",
-    "Base/Java/9. Многопоточность/Threads/Процессы и Потоки, Thread, Runnable, состояния потоков.md",
     "Base/Java/8. Рефлексия/Java Reflection API.md",
     "Base/Java/6. Ввод-вывод и сериализация/Java Serialization and Deserialization.md",
     "Base/Java/6. Ввод-вывод и сериализация/Java Input-Output.md",
