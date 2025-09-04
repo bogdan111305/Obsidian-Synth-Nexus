@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Hibernate/5. Transactions & Locks/Введение в транзакции и блокировки в базах данных.md",
+                "file": "Base/Hibernate/5. Transactions & Locks/Locks. Optimistic.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Введение в транзакции и блокировки в базах данных"
+              "title": "Locks. Optimistic"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Hibernate/5. Transactions & Locks/Введение в транзакции и блокировки в базах данных.md",
+                "file": "Base/Hibernate/5. Transactions & Locks/Locks. Optimistic.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Введение в транзакции и блокировки в базах данных"
+              "title": "Структура Locks. Optimistic"
             }
           }
         ],
@@ -171,6 +171,7 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Hibernate/5. Transactions & Locks/Введение в транзакции и блокировки в базах данных.md",
     "Base/Kafka/Введение в Apache Kafka.md",
     "Base/Kafka/Kafka и Java.md",
     "Base/Kafka/Schema Registry.md",
@@ -180,7 +181,6 @@
     "Base/Kafka/Первые шаги с Kafka.md",
     "Base/Hibernate/5. Transactions & Locks/Locks. Pessimistic.md",
     "Base/Hibernate/5. Transactions & Locks/Locks. Optimistic.md",
-    "Base/Hibernate/5. Transactions & Locks/Введение в транзакции и блокировки в базах данных.md",
     "Base/Hibernate/5. Transactions & Locks/JPA Transactions.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring Core - IoC и DI.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring IoC.md",
