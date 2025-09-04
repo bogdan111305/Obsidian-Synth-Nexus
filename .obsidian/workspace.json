@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Hibernate/5. Transactions & Locks/Введение в транзакции и блокировки в базах данных.md",
+                "file": "Base/Hibernate/5. Transactions & Locks/Locks. Pessimistic.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Введение в транзакции и блокировки в базах данных"
+              "title": "Locks. Pessimistic"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Hibernate/5. Transactions & Locks/Введение в транзакции и блокировки в базах данных.md",
+                "file": "Base/Hibernate/5. Transactions & Locks/Locks. Pessimistic.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Введение в транзакции и блокировки в базах данных"
+              "title": "Структура Locks. Pessimistic"
             }
           }
         ],
@@ -171,6 +171,8 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Hibernate/5. Transactions & Locks/Locks. Optimistic.md",
+    "Base/Hibernate/5. Transactions & Locks/Введение в транзакции и блокировки в базах данных.md",
     "Base/Hibernate/5. Transactions & Locks/JPA Transactions.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring Core - IoC и DI.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring IoC.md",
@@ -195,8 +197,6 @@
     "Base/Spring/4. Spring Data/1. Основы Spring Data JPA/@Query.md",
     "Base/Spring/4. Spring Data/1. Основы Spring Data JPA/@Modifying.md",
     "Base/Spring/1. Основы Spring/1.3 Конфигурация/Properties and YAML.md",
-    "Base/Spring/2. Продвинутые темы Spring/2.2 Event Listeners/Spring Event Listeners.md",
-    "Base/Spring/2. Продвинутые темы Spring/2.1 BeanPostProcessor/BeanPostProcessor.md",
     "Base/Scala",
     "Base/Scala/19_Ресурсы",
     "Base/Scala/18_Собеседование",
