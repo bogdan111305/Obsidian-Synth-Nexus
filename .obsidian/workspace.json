@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/Phaser.md",
+                "file": "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/CountDownLatch.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Phaser"
+              "title": "CountDownLatch"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/Phaser.md",
+                "file": "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/CountDownLatch.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Phaser"
+              "title": "Структура CountDownLatch"
             }
           }
         ],
@@ -171,6 +171,7 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/Phaser.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/Lock.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/Atomic.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/CAS и Unsafe.md",
@@ -191,7 +192,6 @@
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/ThreadPool, Future, Callable, Executors, CompletableFuture.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/CyclicBarrier.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/Semaphore.md",
-    "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/Phaser.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/CountDownLatch.md",
     "Base/Java/8. Рефлексия/Java Reflection API.md",
     "Base/Java/6. Ввод-вывод и сериализация/Java Serialization and Deserialization.md",
