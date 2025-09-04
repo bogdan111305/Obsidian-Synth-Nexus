@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/3. Коллекции и работа с данными/Java Stream API.md",
+                "file": "Base/Hibernate/1. Основы/Основы.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Java Stream API"
+              "title": "Основы"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/3. Коллекции и работа с данными/Java Stream API.md",
+                "file": "Base/Hibernate/1. Основы/Основы.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Java Stream API"
+              "title": "Структура Основы"
             }
           }
         ],
@@ -171,6 +171,7 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Java/3. Коллекции и работа с данными/Java Stream API.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/ThreadPool, Future, Callable, Executors, CompletableFuture.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/Semaphore.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/Phaser.md",
@@ -196,7 +197,6 @@
     "Base/Java/8. Рефлексия/Java Reflection API.md",
     "Base/Java/6. Ввод-вывод и сериализация/Java Serialization and Deserialization.md",
     "Base/Java/6. Ввод-вывод и сериализация/Java Input-Output.md",
-    "Base/Java/4. Работа со строками/Java String, StringBuilder, StringBuffer, StringJoiner, String.format, Текстовые блоки и регулярные выражения в Java.md",
     "Base/Scala",
     "Base/Scala/19_Ресурсы",
     "Base/Scala/18_Собеседование",
