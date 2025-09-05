@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Hibernate/4. N + 1 выборок в Hibernate/Лучшие практики.md",
+                "file": "Base/Hibernate/4. N + 1 выборок в Hibernate/Общая информация и базовые варианты решения.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Лучшие практики"
+              "title": "Общая информация и базовые варианты решения"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Hibernate/4. N + 1 выборок в Hibernate/Лучшие практики.md",
+                "file": "Base/Hibernate/4. N + 1 выборок в Hibernate/Общая информация и базовые варианты решения.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Лучшие практики"
+              "title": "Структура Общая информация и базовые варианты решения"
             }
           }
         ],
@@ -171,13 +171,13 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Hibernate/4. N + 1 выборок в Hibernate/Лучшие практики.md",
     "Base/Hibernate/2. Entity Associations/Каскадирование.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс List.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс Map.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring IoC.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring Core - IoC и DI.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Bean Lifecycle.md",
-    "Base/Hibernate/4. N + 1 выборок в Hibernate/Лучшие практики.md",
     "Base/Hibernate/1. Основы/Primary keys. Embedded components.md",
     "Base/Hibernate/5. Transactions & Locks/Read Only Transactions and Nontransactional Data Access.md",
     "Base/Hibernate/5. Transactions & Locks/Locks. Pessimistic.md",
