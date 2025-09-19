@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс List.md",
+                "file": "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс Map.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Интерфейс List"
+              "title": "Интерфейс Map"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс List.md",
+                "file": "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс Map.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Интерфейс List"
+              "title": "Структура Интерфейс Map"
             }
           }
         ],
@@ -171,6 +171,7 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс List.md",
     "Base/Java/1. Основы/Java Memory Structure.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Приведение типов, widening conversion, narrowing conversion.md",
     "Base/Java/1. Основы/Модель памяти Java (JMM) и барьеры памяти.md",
@@ -183,7 +184,6 @@
     "Base/Hibernate/4. N + 1 выборок в Hibernate/Лучшие практики.md",
     "Base/Hibernate/2. Entity Associations/OneToOne_связи.md",
     "Base/Hibernate/2. Entity Associations/Каскадирование.md",
-    "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс List.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс Map.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring IoC.md",
     "Base/Spring/1. Основы Spring/1.1 IoC и Dependency Injection/Spring Core - IoC и DI.md",
