@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/7. Исключения/Java Exceptions.md",
+                "file": "Base/Java/9. Многопоточность/Threads/Процессы и Потоки, Thread, Runnable, состояния потоков.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Java Exceptions"
+              "title": "Процессы и Потоки, Thread, Runnable, состояния потоков"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/7. Исключения/Java Exceptions.md",
+                "file": "Base/Java/9. Многопоточность/Threads/Процессы и Потоки, Thread, Runnable, состояния потоков.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Java Exceptions"
+              "title": "Структура Процессы и Потоки, Thread, Runnable, состояния потоков"
             }
           }
         ],
@@ -171,6 +171,7 @@
   },
   "active": "e8bb1ceca983aba2",
   "lastOpenFiles": [
+    "Base/Java/7. Исключения/Java Exceptions.md",
     "Base/Java/3. Коллекции и работа с данными/Java Stream API.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейсы Iterator и Iterable.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс Set.md",
@@ -182,7 +183,6 @@
     "Base/Spring/1. Основы Spring/1.2 Аннотации Spring/@Conditional.md",
     "Base/Spring/1. Основы Spring/1.2 Аннотации Spring/@Autowired, @Value и @Resource.md",
     "Base/Kafka/Введение в Apache Kafka.md",
-    "Base/Java/7. Исключения/Java Exceptions.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Полиморфизм.md",
     "Base/Hibernate/4. N + 1 выборок в Hibernate/Общая информация и базовые варианты решения.md",
     "Base/Hibernate/4. N + 1 выборок в Hibernate/Лучшие практики.md",
