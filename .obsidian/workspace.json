@@ -20,8 +20,33 @@
               "icon": "lucide-file",
               "title": "ThreadPool, Future, Callable, Executors, CompletableFuture"
             }
+          },
+          {
+            "id": "69a2b8c167868b10",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.9.14"
+              },
+              "icon": "lucide-book-up",
+              "title": "примечания к выпуску 1.9.14"
+            }
+          },
+          {
+            "id": "bd772a0a23d5b15a",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.10.6"
+              },
+              "icon": "lucide-book-up",
+              "title": "примечания к выпуску 1.10.6"
+            }
           }
-        ]
+        ],
+        "currentTab": 2
       }
     ],
     "direction": "vertical"
@@ -139,13 +164,12 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/ThreadPool, Future, Callable, Executors, CompletableFuture.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура ThreadPool, Future, Callable, Executors, CompletableFuture"
+              "title": "Структура"
             }
           }
         ],
@@ -169,7 +193,7 @@
       "cursor-bridge:Open in Cursor": false
     }
   },
-  "active": "e8bb1ceca983aba2",
+  "active": "bd772a0a23d5b15a",
   "lastOpenFiles": [
     "Base/Hibernate/2. Entity Associations/Каскадирование.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/ThreadPool, Future, Callable, Executors, CompletableFuture.md",
