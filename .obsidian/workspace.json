@@ -37,12 +37,14 @@
             "id": "bd772a0a23d5b15a",
             "type": "leaf",
             "state": {
-              "type": "release-notes",
+              "type": "markdown",
               "state": {
-                "currentVersion": "1.10.6"
+                "file": "Base/Java/8. Рефлексия/Java Reflection API.md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "lucide-book-up",
-              "title": "примечания к выпуску 1.10.6"
+              "icon": "lucide-file",
+              "title": "Java Reflection API"
             }
           }
         ],
@@ -164,12 +166,13 @@
             "state": {
               "type": "outline",
               "state": {
+                "file": "Base/Java/8. Рефлексия/Java Reflection API.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура"
+              "title": "Структура Java Reflection API"
             }
           }
         ],
@@ -195,6 +198,7 @@
   },
   "active": "bd772a0a23d5b15a",
   "lastOpenFiles": [
+    "Base/Java/1. Основы/Java Memory Structure.md",
     "Base/Hibernate/2. Entity Associations/Каскадирование.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/ThreadPool, Future, Callable, Executors, CompletableFuture.md",
     "Base/Java/9. Многопоточность/Concurrent(java.util.concurrent)/Semaphore.md",
@@ -213,7 +217,6 @@
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс Set.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс Map.md",
     "Base/Java/3. Коллекции и работа с данными/Collections/Интерфейс List.md",
-    "Base/Java/1. Основы/Java Memory Structure.md",
     "Base/Java/2. ООП и базовые конструкции/OOP/Приведение типов, widening conversion, narrowing conversion.md",
     "Base/Java/1. Основы/Модель памяти Java (JMM) и барьеры памяти.md",
     "Base/Spring/1. Основы Spring/1.2 Аннотации Spring/@Conditional.md",
