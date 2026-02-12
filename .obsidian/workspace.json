@@ -58,9 +58,21 @@
               "icon": "lucide-book-up",
               "title": "примечания к выпуску 1.11.4"
             }
+          },
+          {
+            "id": "c8ac3e70664ef644",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.11.5"
+              },
+              "icon": "lucide-book-up",
+              "title": "примечания к выпуску 1.11.5"
+            }
           }
         ],
-        "currentTab": 3
+        "currentTab": 4
       }
     ],
     "direction": "vertical"
@@ -207,7 +219,7 @@
       "cursor-bridge:Open in Cursor": false
     }
   },
-  "active": "61d687e1bf069068",
+  "active": "c8ac3e70664ef644",
   "lastOpenFiles": [
     "Base/Java/1. Основы/Java Assembling.md",
     "Base/Java/1. Основы/Модель памяти Java (JMM) и барьеры памяти.md",
