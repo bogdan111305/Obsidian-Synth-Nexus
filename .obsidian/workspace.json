@@ -46,9 +46,21 @@
               "icon": "lucide-file",
               "title": "Модель памяти Java (JMM) и барьеры памяти"
             }
+          },
+          {
+            "id": "61d687e1bf069068",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.11.4"
+              },
+              "icon": "lucide-book-up",
+              "title": "примечания к выпуску 1.11.4"
+            }
           }
         ],
-        "currentTab": 2
+        "currentTab": 3
       }
     ],
     "direction": "vertical"
@@ -166,13 +178,12 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/1. Основы/Модель памяти Java (JMM) и барьеры памяти.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Модель памяти Java (JMM) и барьеры памяти"
+              "title": "Структура"
             }
           }
         ],
@@ -196,7 +207,7 @@
       "cursor-bridge:Open in Cursor": false
     }
   },
-  "active": "bd772a0a23d5b15a",
+  "active": "61d687e1bf069068",
   "lastOpenFiles": [
     "Base/Java/1. Основы/Java Assembling.md",
     "Base/Java/1. Основы/Модель памяти Java (JMM) и барьеры памяти.md",
