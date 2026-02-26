@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Base/Java/1. Основы/Модель памяти Java (JMM) и барьеры памяти.md",
+                "file": "Base/Java/1. Основы/Java Memory Structure.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Модель памяти Java (JMM) и барьеры памяти"
+              "title": "Java Memory Structure"
             }
           }
         ]
@@ -139,13 +139,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Base/Java/1. Основы/Модель памяти Java (JMM) и барьеры памяти.md",
+                "file": "Base/Java/1. Основы/Java Memory Structure.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Модель памяти Java (JMM) и барьеры памяти"
+              "title": "Структура Java Memory Structure"
             }
           }
         ],
@@ -171,8 +171,8 @@
   },
   "active": "589fd359cf449240",
   "lastOpenFiles": [
-    "Base/Java/1. Основы/Java Memory Structure.md",
     "Base/Java/1. Основы/Модель памяти Java (JMM) и барьеры памяти.md",
+    "Base/Java/1. Основы/Java Memory Structure.md",
     "Base/Java/Конспект.md",
     "Base/Java/9. Многопоточность/Threads/wait(), notify(), notifyAll().md",
     "Base/Java/9. Многопоточность/Threads/Synchronized.md",
