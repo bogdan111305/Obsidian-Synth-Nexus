@@ -1,0 +1,16 @@
+# --- Игнорируем только "шум" настроек ---
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/graph.json
+.obsidian/backups/
+.obsidian/plugins/obsidian-git/  # Чтобы сам плагин Git не конфликтовал
+
+# --- Игнорируем временные данные ---
+.trash/
+.DS_Store
+*.tmp
+
+# --- Игнорируем мусор IDE ---
+.idea/
+.cursor/
+*.iml
