@@ -1,3 +1,11 @@
+---
+title: "Java — Приведение типов (widening / narrowing conversion)"
+tags: [java, oop, type-casting, widening, narrowing, instanceof]
+updated: 2026-03-04
+---
+
+# Приведение типов в Java (widening / narrowing)
+
 ## Основы приведения типов
 
 ### Концепция приведения типов

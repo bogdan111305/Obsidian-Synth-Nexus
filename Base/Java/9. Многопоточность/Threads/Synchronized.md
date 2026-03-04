@@ -1,3 +1,5 @@
+# synchronized
+
 **`synchronized`** — ключевое слово в Java, обеспечивающее **мониторный (взаимный) эксклюзивный доступ** к участку кода или объекту, предотвращая гонки данных (race conditions). Оно гарантирует, что только один поток может выполнять синхронизированный код для данного монитора, обеспечивая взаимное исключение и видимость изменений. Эта статья подробно рассматривает `synchronized`, его реализацию в JVM, deadlock, потокобезопасность, подводные камни, производительность и современные альтернативы (Java 21+).
 
 ## 1. Что такое `synchronized`?
@@ -100,7 +102,7 @@ monitorexit
 - **Типы мониторов**:
     - **Fat monitor (heavyweight lock)**: Использует системные примитивы ОС (например, `pthread_mutex` на Linux). Затратен при конкуренции.
     - **Lightweight lock**: Применяет CAS (Compare-And-Swap) для захвата монитора без обращения к ОС, если конкуренция низкая.
-    - **Biased lock**: Оптимизация для случаев, когда монитор захватывает один поток. Минимизирует накладные расходы.
+    - **Biased lock** (устарел): Оптимизация для одного потока. Помечен deprecated в Java 15 (JEP 374), отключён по умолчанию в Java 17, **удалён в Java 21**.
 - **JMM (Java Memory Model)**:
     - `synchronized` устанавливает барьеры памяти (`store` при входе, `load` при выходе).
     - Гарантирует видимость изменений для всех потоков, захватывающих тот же монитор.
@@ -350,7 +352,7 @@ public class OptimisticCounter {
 
 ### 9.3. Виртуальные потоки
 
-Виртуальные потоки (Java 21, Project Loom) используют `synchronized` аналогично платформенным потокам.
+Виртуальные потоки (Java 21, Project Loom) поддерживают `synchronized`, но с важным ограничением: блокировка на `synchronized` мониторе вызывает **пинирование (pinning)** — JVM не может снять виртуальный поток с несущего платформенного потока. Это снижает масштабируемость при высокой конкуренции.
 
 **Пример**:
 
@@ -359,13 +361,23 @@ public class VirtualThreadSync {
     private int count;
 
     public synchronized void increment() {
-        count++;
+        count++; // Пинирование при конкуренции
     }
 
     public static void main(String[] args) {
         VirtualThreadSync counter = new VirtualThreadSync();
         Thread.ofVirtual().start(() -> counter.increment());
     }
+}
+```
+
+**Рекомендация**: В виртуальных потоках предпочитайте `ReentrantLock` — он не вызывает пинирования:
+
+```java
+private final ReentrantLock lock = new ReentrantLock();
+public void increment() {
+    lock.lock();
+    try { count++; } finally { lock.unlock(); }
 }
 ```
 

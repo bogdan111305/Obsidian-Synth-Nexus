@@ -1,3 +1,11 @@
+---
+title: "Java — Интерфейс Set (HashSet, LinkedHashSet, TreeSet)"
+tags: [java, collections, set, hashset, treeset]
+updated: 2026-03-04
+---
+
+# Интерфейс Set в Java
+
 ## 1. Обзор интерфейса `Set<E>`
 
 `Set<E>` — это коллекция, которая:

@@ -1,3 +1,11 @@
+---
+title: "Java — String, StringBuilder, StringBuffer, Text Blocks, Regex"
+tags: [java, string, stringbuilder, text-blocks, regex, stringjoiner]
+updated: 2026-03-04
+---
+
+# Работа со строками в Java
+
 ## 1. Класс `String`
 
 Класс `String` в пакете `java.lang` представляет неизменяемые (immutable) строки символов в кодировке UTF-16. Неизменяемость гарантирует потокобезопасность и возможность использования пула строк для оптимизации памяти.

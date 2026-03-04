@@ -1,6 +1,10 @@
-# Ключевое слово `static` в Java: Полное и понятное руководство
-
 ---
+title: "Java Static — ключевое слово static"
+tags: [java, static, class-members, initialization]
+updated: 2026-03-04
+---
+
+# Ключевое слово `static` в Java: Полное и понятное руководство
 
 ## Введение
 

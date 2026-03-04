@@ -1,3 +1,11 @@
+---
+title: "Java — Интерфейсы Iterator и Iterable"
+tags: [java, collections, iterator, iterable, for-each]
+updated: 2026-03-04
+---
+
+# Интерфейсы Iterator и Iterable в Java
+
 ## 1. Обзор интерфейсов `Iterator` и `Iterable`
 
 ### 1.1. Что такое `Iterable`?

@@ -1,3 +1,11 @@
+---
+title: "Java Input/Output — потоки, NIO.2, Files"
+tags: [java, io, nio, streams, files, inputstream, outputstream]
+updated: 2026-03-04
+---
+
+# Java Input/Output (I/O и NIO.2)
+
 ## 1. Основы ввода-вывода в Java
 
 Система I/O в Java построена на концепции **потоков** (streams), которые представляют последовательность данных. Потоки делятся на два типа:

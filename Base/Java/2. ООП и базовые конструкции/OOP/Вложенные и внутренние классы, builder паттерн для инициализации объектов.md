@@ -1,3 +1,11 @@
+---
+title: "Java — Вложенные и внутренние классы, Builder паттерн"
+tags: [java, oop, nested-classes, inner-class, anonymous-class, builder-pattern]
+updated: 2026-03-04
+---
+
+# Вложенные и внутренние классы. Builder паттерн
+
 ## Основы вложенных классов
 
 ### Концепция вложенных классов

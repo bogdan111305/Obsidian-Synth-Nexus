@@ -323,6 +323,167 @@ public class ConditionExample {
 - Интеграция с `tryLock()` и таймаутами.
 - Явное управление блокировками.
 
+# wait(), notify(), notifyAll()
+
 ### 9.2. Виртуальные потоки (Java 21, Project Loom)
 
-В
+Виртуальные потоки поддерживают `wait()`/`notify()` аналогично платформенным потокам, однако при блокировке на `synchronized` мониторе виртуальный поток **пинируется** (pinning) — JVM не может демонтировать его с несущего потока. Это ограничивает масштабируемость.
+
+**Пример**:
+
+```java
+public class VirtualWaitNotify {
+    private final Object lock = new Object();
+    private boolean ready;
+
+    public void producer() throws InterruptedException {
+        Thread.ofVirtual().start(() -> {
+            synchronized (lock) {
+                ready = true;
+                lock.notifyAll();
+            }
+        });
+    }
+
+    public void consumer() throws InterruptedException {
+        Thread.ofVirtual().start(() -> {
+            synchronized (lock) {
+                try {
+                    while (!ready) {
+                        lock.wait(); // Пинирование виртуального потока
+                    }
+                    System.out.println("Получен сигнал");
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+    }
+}
+```
+
+**Рекомендация для виртуальных потоков**: Предпочитайте `ReentrantLock` + `Condition` вместо `synchronized` + `wait/notify` — это избегает пинирования и улучшает масштабируемость.
+
+## 10. Подводные камни
+
+1. **Вызов без `synchronized`**:
+
+    ```java
+    lock.wait(); // IllegalMonitorStateException
+    ```
+
+    **Решение**: Всегда вызывайте внутри `synchronized`:
+
+    ```java
+    synchronized (lock) { lock.wait(); }
+    ```
+
+2. **Использование `if` вместо `while`**:
+
+    ```java
+    synchronized (lock) {
+        if (!condition) lock.wait(); // Риск spurious wakeup
+    }
+    ```
+
+    **Решение**: Используйте `while`:
+
+    ```java
+    while (!condition) lock.wait();
+    ```
+
+3. **`notify()` вместо `notifyAll()`**:
+
+    - Может пробудить не тот поток.
+    - **Решение**: Используйте `notifyAll()` при нескольких условиях или потоках.
+
+4. **Игнорирование `InterruptedException`**:
+
+    ```java
+    try { lock.wait(); } catch (InterruptedException e) { /* ignored */ }
+    ```
+
+    **Решение**: Восстанавливайте флаг:
+
+    ```java
+    Thread.currentThread().interrupt();
+    ```
+
+## 11. Производительность
+
+- **`wait()`/`notify()`**: Эффективны при низкой конкуренции.
+- **`notifyAll()`**: Увеличивает конкуренцию за монитор при большом числе потоков.
+- **Сравнение**:
+    - `wait()`/`notify()`: Встроены в `Object`, просты, но ограничены одним условием на монитор.
+    - `Condition`: Несколько условий, поддержка `awaitNanos`, `awaitUntil`.
+    - `BlockingQueue`: Инкапсулирует паттерн Producer-Consumer.
+- **Рекомендации**:
+    - Используйте `wait()`/`notify()` для простой кооперации.
+    - Переходите на `Condition` или `BlockingQueue` для сложных сценариев.
+
+## 12. Лучшие практики
+
+1. **Всегда используйте `while` для проверки условия**:
+
+    ```java
+    synchronized (lock) {
+        while (!condition) lock.wait();
+    }
+    ```
+
+2. **Предпочитайте `notifyAll()` в сложных сценариях**:
+
+    ```java
+    lock.notifyAll();
+    ```
+
+3. **Используйте приватный объект-монитор**:
+
+    ```java
+    private final Object lock = new Object();
+    ```
+
+4. **Переходите на `Condition` для нескольких условий**:
+
+    ```java
+    Condition canRead = lock.newCondition();
+    Condition canWrite = lock.newCondition();
+    ```
+
+5. **Для виртуальных потоков — `ReentrantLock` + `Condition`**:
+
+    ```java
+    lock.lock();
+    try {
+        while (!condition) condition.await();
+    } finally {
+        lock.unlock();
+    }
+    ```
+
+6. **Тестируйте кооперацию**:
+
+    ```java
+    @Test
+    void testWaitNotify() throws InterruptedException {
+        ProducerConsumer pc = new ProducerConsumer();
+        Thread producer = new Thread(() -> {
+            try { pc.produce(); } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        Thread consumer = new Thread(() -> {
+            try { pc.consume(); } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        producer.start();
+        consumer.start();
+        producer.join(2000);
+        consumer.join(2000);
+    }
+    ```
+
+## 13. Заключение
+
+Методы `wait()`, `notify()`, `notifyAll()` — низкоуровневые инструменты кооперации потоков через монитор объекта. Они требуют `synchronized`, используют **wait set** для очередей ожидания и устанавливают **happens-before** гарантии через JMM. Паттерн «цикл + `wait()`» защищает от spurious wakeups. Современные альтернативы (`Condition`, `BlockingQueue`, `CompletableFuture`) и виртуальные потоки (Java 21) предоставляют более гибкое управление. Следование лучшим практикам — использование `while`, `notifyAll()`, приватных мониторов — обеспечивает корректную и производительную синхронизацию.

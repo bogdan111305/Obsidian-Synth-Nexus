@@ -1,3 +1,11 @@
+---
+title: "Java — Класс Object"
+tags: [java, oop, object, equals, hashcode, clone]
+updated: 2026-03-04
+---
+
+# Класс Object в Java
+
 ## Роль класса Object
 
 - **Корень иерархии**: Каждый класс в Java неявно наследует `Object`, если не указан другой родитель.

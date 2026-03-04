@@ -1,3 +1,11 @@
+---
+title: "Java Stream API — внутренняя архитектура и операции"
+tags: [java, stream-api, functional, collections, parallel-stream, collectors]
+updated: 2026-03-04
+---
+
+# Java Stream API
+
 Java Stream API, представленная в Java 8, предоставляет функциональный подход к обработке коллекций данных в декларативном стиле через цепочки операций (pipelines). Эта статья глубоко погружает в механизмы работы Stream API, рассматривая архитектуру, ключевые компоненты, поток выполнения и аспекты производительности.
 ## Общая структура потока
 
@@ -677,6 +685,155 @@ public class StreamIntegration {
     }
 }
 ```
+
+## Collectors.teeing() (Java 12)
+
+`Collectors.teeing()` — комбинирует **два коллектора** на одном stream, возвращая результат через `BiFunction`:
+
+```java
+import java.util.stream.Collectors;
+
+// Сигнатура:
+// Collectors.teeing(Collector<T,?,R1>, Collector<T,?,R2>, BiFunction<R1,R2,R> merger)
+
+// Пример 1: одновременно sum и count (без двух проходов!):
+record Stats(long count, double sum) {}
+
+Stats stats = IntStream.rangeClosed(1, 10)
+    .boxed()
+    .collect(Collectors.teeing(
+        Collectors.counting(),
+        Collectors.summingDouble(Integer::doubleValue),
+        Stats::new
+    ));
+// Stats[count=10, sum=55.0]
+
+// Пример 2: разделить список на два по условию:
+record Partition<T>(List<T> matching, List<T> rest) {}
+
+Partition<String> partitioned = Stream.of("Alice", "Bob", "Charlie", "Dave")
+    .collect(Collectors.teeing(
+        Collectors.filtering(s -> s.length() > 4, Collectors.toList()),
+        Collectors.filtering(s -> s.length() <= 4, Collectors.toList()),
+        Partition::new
+    ));
+// matching: [Alice, Charlie], rest: [Bob, Dave]
+
+// Пример 3: min и max за один проход:
+record MinMax(Optional<Integer> min, Optional<Integer> max) {}
+
+MinMax minMax = Stream.of(3, 1, 4, 1, 5, 9, 2, 6)
+    .collect(Collectors.teeing(
+        Collectors.minBy(Integer::compareTo),
+        Collectors.maxBy(Integer::compareTo),
+        MinMax::new
+    ));
+// MinMax[min=Optional[1], max=Optional[9]]
+```
+
+**Когда использовать:**
+- Нужно вычислить два разных агрегата за **один проход** по stream
+- Вместо двух отдельных `stream().collect(...)` — экономия итерации
+- Разбивка на "прошли условие / не прошли" (альтернатива `Collectors.partitioningBy`)
+
+---
+
+## Parallel Streams: когда НЕ использовать
+
+Параллельные stream используют `ForkJoinPool.commonPool()` и не всегда дают выигрыш:
+
+### Ситуации когда параллелизм ВРЕДИТ:
+
+**1. Малые коллекции (N < ~10 000 элементов):**
+```java
+// Плохо: overhead на разделение и синхронизацию больше, чем выигрыш
+List<Integer> small = List.of(1, 2, 3, 4, 5);
+small.parallelStream().map(i -> i * 2).collect(Collectors.toList()); // медленнее!
+```
+
+**2. Упорядоченные операции (ORDERED source + encounter order important):**
+```java
+// sorted() + parallel: всегда нужен merge-sort → огромный overhead
+// Ещё хуже: findFirst() на parallel stream — принудительно восстанавливает порядок
+List<Integer> result = list.parallelStream()
+    .filter(i -> i % 2 == 0)
+    .findFirst()  // параллельно, но JVM должна найти ПЕРВЫЙ → много синхронизации
+    .orElse(-1);
+
+// Если порядок не важен — используйте findAny():
+list.parallelStream().filter(i -> i % 2 == 0).findAny(); // эффективнее
+```
+
+**3. I/O операции:**
+```java
+// Плохо: параллельный stream использует commonPool (CPU-bound)
+// I/O-bound задачи заблокируют его потоки
+files.parallelStream()
+    .map(file -> readFile(file))  // I/O — блокирует ForkJoinPool!
+    .collect(Collectors.toList());
+
+// Правильно: CompletableFuture с отдельным executor:
+List<CompletableFuture<String>> futures = files.stream()
+    .map(file -> CompletableFuture.supplyAsync(() -> readFile(file), ioExecutor))
+    .collect(Collectors.toList());
+```
+
+**4. Stateful лямбды (изменение общего состояния):**
+```java
+// ОЧЕНЬ ПЛОХО: гонка данных!
+List<Integer> shared = new ArrayList<>();
+list.parallelStream().forEach(i -> shared.add(i)); // race condition!
+
+// Правильно:
+List<Integer> result = list.parallelStream().collect(Collectors.toList());
+```
+
+**5. Операции с блокировками (`synchronized`, `Lock`):**
+```java
+// Параллельный stream с synchronized — фактически последовательный:
+synchronized (lock) {
+    list.parallelStream().forEach(i -> process(i)); // потоки ждут одного замка
+}
+```
+
+### Когда параллелизм ПОМОГАЕТ:
+- Коллекция > 10 000 элементов
+- CPU-интенсивные вычисления без side effects
+- `ArrayList`, массивы (хорошо делятся `Spliterator`; `LinkedList` — плохо!)
+- Независимые операции без общего состояния
+- `unordered()` добавлен — снимает ограничение порядка
+
+```java
+// Хороший сценарий: сложные вычисления на большом массиве
+long count = LongStream.rangeClosed(1, 10_000_000)
+    .parallel()
+    .filter(n -> isPrime(n))  // CPU-bound, нет I/O, нет состояния
+    .count();
+```
+
+---
+
+## Interview Q&A (Senior Level)
+
+**Q1: Что такое `Collectors.teeing()` и когда он эффективнее двух раздельных collect?**
+
+> `teeing(collector1, collector2, merger)` применяет оба коллектора к одному stream **за один проход**, возвращая результат через `BiFunction`. Эффективнее двух раздельных `collect()` когда источник данных: (1) генерируется lazily и нельзя пройти дважды (`Files.lines()`, сетевой поток); (2) очень большой — двойной проход удваивает время; (3) дорогостоящий для повторного создания. Пример: вычислить count и sum за одну итерацию вместо двух `stream().count()` и `stream().mapToInt().sum()`.
+
+**Q2: Почему `parallelStream()` может быть медленнее `stream()` для малых коллекций?**
+
+> `parallelStream()` использует `ForkJoinPool.commonPool()` для распределения работы через `Spliterator.trySplit()`. Overhead включает: разделение источника на части, создание задач ForkJoin, синхронизацию при слиянии результатов (особенно для `sorted`, `findFirst`). При малых коллекциях (< ~10 000 элементов) overhead fork/join превышает сэкономленное время. Кроме того, `commonPool` разделяется со всем приложением — параллельный stream в одном месте может замедлить другой параллельный stream или `CompletableFuture`.
+
+**Q3: Как Spliterator влияет на производительность parallelStream? Чем LinkedList хуже ArrayList?**
+
+> `Spliterator.trySplit()` делит источник для параллельной обработки. `ArrayList` имеет `ArrayListSpliterator` — O(1) split по индексу, создаёт ровные половины. `LinkedList` имеет `LinkedListSpliterator` — требует итерации для нахождения середины, O(n) split. При параллельной обработке `LinkedList` split дорог → реально задачи распределяются неравномерно → часть потоков простаивает → выигрыш от параллелизма минимальный. Для параллельных stream используйте `ArrayList`, массивы, или `CopyOnWriteArrayList`.
+
+**Q4: Что произойдёт при использовании `forEach` в параллельном stream для добавления в `ArrayList`?**
+
+> Race condition (гонка данных). `ArrayList` не является thread-safe: при одновременной записи нескольких потоков возможны: (1) `ArrayIndexOutOfBoundsException` если два потока одновременно увеличивают размер; (2) потеря элементов если два потока записывают в одну ячейку; (3) поврежденное внутреннее состояние (`size` неконсистентен с реальным содержимым). Правильные альтернативы: `collect(Collectors.toList())` (потокобезопасный reduce), `ConcurrentLinkedQueue::add` в `forEach`, или `Collections.synchronizedList()`.
+
+**Q5: Как работает ленивость (laziness) в Stream API и когда она может стать проблемой?**
+
+> Промежуточные операции (`filter`, `map`, `flatMap`) не выполняются сразу — они строят **описание** трансформации (цепочку `Sink`). Выполнение начинается только при терминальной операции (`collect`, `count`, `findFirst`). Польза: `findFirst()` после `filter()` остановится при первом совпадении — не будет обрабатывать весь поток. Ловушки: (1) **short-circuit не работает с infinite streams** + `sorted()` — `sorted()` буферизирует ВСЕ элементы перед сортировкой, застрянет навсегда; (2) **closed stream**: после терминальной операции stream закрыт, повторный вызов → `IllegalStateException`; (3) **side effects в промежуточных операциях** "откладываются" — порядок их выполнения непредсказуем при параллелизме.
 
 ## Вопросы для собеседования
 

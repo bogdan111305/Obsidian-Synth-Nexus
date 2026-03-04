@@ -1,3 +1,11 @@
+---
+title: "Java — Сериализация и Десериализация"
+tags: [java, serialization, deserialization, serializable, externalizable, transient]
+updated: 2026-03-04
+---
+
+# Java Serialization and Deserialization
+
 ## 1. Что такое сериализация и десериализация?
 
 - **Сериализация**: Процесс преобразования объекта Java в последовательность байтов, которую можно сохранить в файл, передать по сети или сохранить в базе данных.
