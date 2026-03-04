@@ -1,1 +1,0 @@
-<i style="color:#f3ff00"></i>
