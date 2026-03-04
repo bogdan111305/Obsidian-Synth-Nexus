@@ -1,4 +1,5 @@
 # --- Игнорируем только "шум" настроек ---
+.obsidian/workspace
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
 .obsidian/graph.json
