@@ -9,8 +9,6 @@ updated: 2026-03-10
 > [!QUOTE] Суть
 > **NIO**: Channel (двунаправленный) + Buffer (данные) + Selector (один поток — N каналов, неблокирующий). **Zero-copy**: `transferTo()` передаёт данные без копирования в user space (sendfile syscall). Основа Netty, Tomcat NIO, высоконагруженных серверов.
 
-> Java NIO (New I/O, Java 1.4) — неблокирующая I/O система на базе Channels, Buffers и Selectors. Основа Netty, Tomcat NIO connector, gRPC-java и высокопроизводительных сетевых фреймворков.
-
 ## 1. NIO vs Traditional I/O
 
 ```mermaid
@@ -183,7 +181,14 @@ SocketChannel conn = server.accept(); // null если нет входящих (
 
 ## 4. Selector — мультиплексирование I/O
 
-Selector позволяет одному потоку обслуживать тысячи соединений.
+Selector позволяет одному потоку обслуживать тысячи соединений. Цикл работы:
+
+1. Зарегистрировать `ServerSocketChannel` в `Selector` с интересом `OP_ACCEPT`.
+2. Вызвать `selector.select()` — блокируется до появления готовых каналов.
+3. Итерировать `selectedKeys()`, удаляя каждый ключ после обработки.
+4. При `OP_ACCEPT` — принять соединение и зарегистрировать с `OP_READ`.
+5. При `OP_READ` — прочитать данные, подготовить ответ, переключиться на `OP_WRITE`.
+6. При `OP_WRITE` — отправить ответ, переключиться обратно на `OP_READ`.
 
 ```mermaid
 flowchart TB

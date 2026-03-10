@@ -9,8 +9,6 @@ updated: 2026-03-10
 > [!QUOTE] Суть
 > Инструменты профилирования: **JFR** (Java Flight Recorder, low-overhead, production-safe), **async-profiler** (CPU/alloc/lock, wall-clock), **jstack** (thread dump), **jmap** (heap dump), **VisualVM/JConsole** (GUI). Diagnose: CPU-bound → CPU sampling, Memory leak → heap dump + MAT.
 
-> Производительность без измерений — это гадание. Senior разработчик владеет инструментами диагностики и знает как читать данные, а не только как писать "оптимальный" код.
-
 ## 1. Слои наблюдаемости JVM
 
 ```mermaid

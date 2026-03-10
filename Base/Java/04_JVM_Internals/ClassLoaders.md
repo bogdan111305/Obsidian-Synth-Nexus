@@ -12,8 +12,6 @@ updated: 2026-03-04
 > [!WARNING] Ловушка: ClassCastException между разными ClassLoader
 > Если класс `Foo` загружен двумя разными ClassLoader, то `(Foo) fooFromOtherCL` → `ClassCastException`, даже если это один и тот же `.class` файл. Это частая проблема в OSGi, веб-контейнерах (Tomcat), плагинных системах.
 
-**ClassLoader** — компонент JVM, отвечающий за поиск, загрузку и определение классов в runtime. Понимание ClassLoader необходимо для диагностики `NoClassDefFoundError`, реализации плагинных систем, горячей перезагрузки кода и работы с JPMS.
-
 ## 1. Иерархия ClassLoader
 
 ```

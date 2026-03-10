@@ -77,14 +77,19 @@ Records — это компактный способ объявления неи
 ```java
 public record Point(int x, int y) {}
 
+// Автогенерируется компилятором:
+// - Конструктор: Point(int x, int y)
+// - Аксессоры: int x(), int y()  (не getX() — именно x()!)
+// - equals(Object), hashCode(), toString()
+
 Point p = new Point(1, 2);
 System.out.println(p.x()); // 1
 System.out.println(p);     // Point[x=1, y=2]
 ```
 
-- Автоматически реализуются `equals`, `hashCode`, `toString`.
-- Все поля final, класс неизменяемый.
-- Можно реализовывать интерфейсы, использовать в sealed-иерархиях.
+- Все компонентные поля `private final` — класс иммутабельный.
+- Не может `extends` другой класс (неявно `extends Record`), но может реализовывать интерфейсы.
+- Подходит для sealed-иерархий и Pattern Matching.
 
 ---
 

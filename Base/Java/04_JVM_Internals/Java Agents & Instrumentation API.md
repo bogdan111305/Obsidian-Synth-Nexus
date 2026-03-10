@@ -9,8 +9,6 @@ updated: 2026-03-10
 > [!QUOTE] Суть
 > **Java Agent** (`-javaagent:agent.jar`) — подключается к JVM до или во время работы, трансформирует байт-код через `ClassFileTransformer`. Основа APM (Datadog, Dynatrace), AOP (AspectJ LTW), JaCoCo. `premain()` — вход агента при старте, `agentmain()` — для attach к уже работающей JVM.
 
-> Java Agents — механизм перехвата и трансформации байт-кода на лету. На нём построены: APM-системы (Datadog, New Relic, Dynatrace), фреймворки тестирования (Mockito, PowerMock), профилировщики (async-profiler, JFR), AOP (AspectJ LTW).
-
 ## 1. Архитектура Java Agent
 
 ```mermaid
