@@ -1,5 +1,7 @@
 # Установка и настройка Apache Kafka
 
+> [!QUOTE] KRaft mode — режим работы Kafka без ZooKeeper. Kafka сама управляет метаданными кластера через встроенный Raft-консенсус. Доступен с версии 2.8, рекомендован для новых установок начиная с Kafka 3.3+.
+
 ## Оглавление
 1. [Способы установки](#способы-установки)
 2. [Установка через Docker](#docker)
@@ -13,15 +15,14 @@
 
 ## Способы установки
 
-### Доступные варианты:
-1. **Docker** - самый простой способ для разработки
-2. **Standalone** - установка на одном сервере
-3. **Кластер** - production-ready установка
-4. **Managed services** - AWS MSK, Confluent Cloud, Azure Event Hubs
+- **Docker** — быстрый старт для разработки
+- **Standalone** — установка на одном сервере
+- **Кластер** — production-ready установка (минимум 3 брокера)
+- **Managed services** — AWS MSK, Confluent Cloud, Azure Event Hubs
 
 ## Установка через Docker
 
-### 1. Простая установка с Docker Compose
+### 1. Docker Compose с ZooKeeper
 
 ```yaml
 # docker-compose.yml
@@ -86,13 +87,8 @@ volumes:
 ### 2. Запуск и проверка
 
 ```bash
-# Запуск всех сервисов
 docker-compose up -d
-
-# Проверка статуса
 docker-compose ps
-
-# Просмотр логов
 docker-compose logs kafka
 
 # Создание тестового топика
@@ -102,7 +98,6 @@ docker exec -it kafka kafka-topics --create \
   --partitions 3 \
   --replication-factor 1
 
-# Проверка топиков
 docker exec -it kafka kafka-topics --list \
   --bootstrap-server localhost:9092
 ```
@@ -139,13 +134,11 @@ services:
       CLUSTER_ID: '4L6g3nShT-eMCtK--X86sw'
     volumes:
       - kafka-data:/var/lib/kafka/data
-    command: 
+    command:
       - bash
       - -c
       - |
-        echo "Formatting kafka storage..."
         kafka-storage format -t $CLUSTER_ID -c /etc/kafka/kafka.properties
-        echo "Starting kafka..."
         /etc/confluent/docker/run
 
 volumes:
@@ -157,14 +150,10 @@ volumes:
 ### 1. Скачивание и распаковка
 
 ```bash
-# Скачивание Kafka
 wget https://downloads.apache.org/kafka/3.5.1/kafka_2.13-3.5.1.tgz
-
-# Распаковка
 tar -xzf kafka_2.13-3.5.1.tgz
 cd kafka_2.13-3.5.1
 
-# Создание директорий для логов
 mkdir -p /tmp/kafka-logs
 mkdir -p /tmp/zookeeper
 ```
@@ -183,30 +172,28 @@ admin.enableServer=false
 
 ```properties
 # config/server.properties
-# Основные настройки
 broker.id=0
 listeners=PLAINTEXT://localhost:9092
 log.dirs=/tmp/kafka-logs
 num.partitions=1
 default.replication.factor=1
 
-# Настройки производительности
+# Производительность
 num.network.threads=3
 num.io.threads=8
 socket.send.buffer.bytes=102400
 socket.receive.buffer.bytes=102400
 socket.request.max.bytes=104857600
 
-# Настройки логов
+# Логи
 log.segment.bytes=1073741824
 log.retention.hours=168
 log.retention.check.interval.ms=300000
 
-# Настройки очистки
+# Очистка
 log.cleaner.enable=true
 log.cleanup.policy=delete
 
-# Настройки безопасности
 delete.topic.enable=true
 auto.create.topics.enable=true
 ```
@@ -214,39 +201,30 @@ auto.create.topics.enable=true
 ### 4. Запуск сервисов
 
 ```bash
-# Запуск ZooKeeper
 bin/zookeeper-server-start.sh config/zookeeper.properties &
-
-# Запуск Kafka
 bin/kafka-server-start.sh config/server.properties &
 
-# Проверка статуса
+# Проверка
 jps | grep -E "(Kafka|QuorumPeerMain)"
 
-# Создание топика
 bin/kafka-topics.sh --create \
   --topic test-topic \
   --bootstrap-server localhost:9092 \
   --partitions 3 \
   --replication-factor 1
 
-# Проверка топиков
-bin/kafka-topics.sh --list \
-  --bootstrap-server localhost:9092
+bin/kafka-topics.sh --list --bootstrap-server localhost:9092
 ```
 
 ## Настройка кластера
 
-### 1. Архитектура кластера
+### 1. Минимальная конфигурация для production
 
-```bash
-# Минимальная конфигурация для production:
-# - 3 брокера Kafka
-# - 3 узла ZooKeeper (или KRaft mode)
-# - Отдельные серверы для мониторинга
-```
+- 3 брокера Kafka
+- 3 узла ZooKeeper (или KRaft mode)
+- Отдельные серверы для мониторинга
 
-### 2. Конфигурация для каждого брокера
+### 2. Конфигурация брокера
 
 ```properties
 # server-1.properties
@@ -257,26 +235,26 @@ num.partitions=3
 default.replication.factor=3
 min.insync.replicas=2
 
-# Настройки репликации
+# Репликация
 replica.lag.time.max.ms=10000
-replica.lag.max.messages=4000
+replica.fetch.max.bytes=1048576
 
-# Настройки производительности
+# Производительность
 num.network.threads=3
 num.io.threads=8
 socket.send.buffer.bytes=102400
 socket.receive.buffer.bytes=102400
 socket.request.max.bytes=104857600
 
-# Настройки логов
+# Логи
 log.segment.bytes=1073741824
 log.retention.hours=168
 log.retention.bytes=1073741824
 
-# Настройки безопасности
-delete.topic.enable=true
 auto.create.topics.enable=false
 ```
+
+> [!INFO] `min.insync.replicas=2` — минимальное число реплик, которые должны подтвердить запись. Совместно с `acks=all` на продюсере гарантирует, что данные записаны на несколько брокеров.
 
 ### 3. Настройка ZooKeeper кластера
 
@@ -291,7 +269,7 @@ server.2=kafka-2:2888:3888
 server.3=kafka-3:2888:3888
 ```
 
-### 4. Скрипты для управления кластером
+### 4. Скрипт запуска кластера
 
 ```bash
 #!/bin/bash
@@ -308,8 +286,6 @@ echo "Starting Kafka cluster..."
 ssh kafka-1 "cd /opt/kafka && bin/kafka-server-start.sh config/server-1.properties &"
 ssh kafka-2 "cd /opt/kafka && bin/kafka-server-start.sh config/server-2.properties &"
 ssh kafka-3 "cd /opt/kafka && bin/kafka-server-start.sh config/server-3.properties &"
-
-echo "Cluster started successfully!"
 ```
 
 ## Конфигурация брокера
@@ -317,17 +293,10 @@ echo "Cluster started successfully!"
 ### 1. Основные настройки
 
 ```properties
-# Идентификация брокера
 broker.id=1
-
-# Сетевые настройки
 listeners=PLAINTEXT://0.0.0.0:9092
 advertised.listeners=PLAINTEXT://kafka-1:9092
-
-# Директории для логов
 log.dirs=/var/lib/kafka/data
-
-# Настройки партиций
 num.partitions=3
 default.replication.factor=3
 min.insync.replicas=2
@@ -336,21 +305,17 @@ min.insync.replicas=2
 ### 2. Настройки производительности
 
 ```properties
-# Сетевые потоки
 num.network.threads=3
 num.io.threads=8
 
-# Буферы
 socket.send.buffer.bytes=102400
 socket.receive.buffer.bytes=102400
 socket.request.max.bytes=104857600
 
-# Настройки логов
 log.segment.bytes=1073741824
 log.retention.hours=168
 log.retention.bytes=1073741824
 
-# Настройки очистки
 log.cleaner.enable=true
 log.cleanup.policy=delete
 log.cleaner.threads=2
@@ -359,23 +324,19 @@ log.cleaner.threads=2
 ### 3. Настройки репликации
 
 ```properties
-# Репликация
 replica.lag.time.max.ms=10000
-replica.lag.max.messages=4000
 replica.fetch.max.bytes=1048576
 replica.fetch.wait.max.ms=500
 
-# Настройки лидера
 leader.imbalance.check.interval.seconds=300
 leader.imbalance.per.broker.percentage=10
 ```
 
 ## Безопасность
 
-### 1. SSL/TLS настройка
+### 1. SSL/TLS
 
 ```properties
-# SSL настройки
 ssl.keystore.location=/path/to/kafka.server.keystore.jks
 ssl.keystore.password=password
 ssl.key.password=password
@@ -383,36 +344,33 @@ ssl.truststore.location=/path/to/kafka.server.truststore.jks
 ssl.truststore.password=password
 ssl.client.auth=required
 
-# Слушатели
 listeners=SSL://0.0.0.0:9093
 advertised.listeners=SSL://kafka-1:9093
 ```
 
-### 2. SASL настройка
+### 2. SASL
 
 ```properties
-# SASL настройки
 sasl.enabled.mechanisms=PLAIN
 sasl.mechanism.inter.broker.protocol=PLAIN
 authorizer.class.name=kafka.security.authorizer.AclAuthorizer
 allow.everyone.if.no.acl.found=false
 
-# Слушатели
 listeners=SASL_PLAINTEXT://0.0.0.0:9092
 advertised.listeners=SASL_PLAINTEXT://kafka-1:9092
 ```
 
-### 3. ACL настройка
+### 3. ACL
 
 ```bash
-# Создание пользователя
+# Дать пользователю alice право читать топик
 kafka-acls.sh --bootstrap-server localhost:9092 \
   --add \
   --allow-principal User:alice \
   --operation Read \
   --topic test-topic
 
-# Создание группы
+# Дать право читать группу
 kafka-acls.sh --bootstrap-server localhost:9092 \
   --add \
   --allow-principal User:alice \
@@ -420,17 +378,19 @@ kafka-acls.sh --bootstrap-server localhost:9092 \
   --group my-group
 ```
 
+> [!WARNING] `allow.everyone.if.no.acl.found=true` (значение по умолчанию) разрешает всё, если ACL не настроены. В production всегда устанавливайте `false` и явно определяйте права.
+
 ## Мониторинг
 
 ### 1. JMX метрики
 
 ```properties
-# Включение JMX
+# Включение JMX (переменные окружения при запуске)
 JMX_PORT=9999
 JMX_HOSTNAME=localhost
 ```
 
-### 2. Prometheus метрики
+### 2. Prometheus
 
 ```yaml
 # prometheus.yml
@@ -445,7 +405,7 @@ scrape_configs:
     scrape_interval: 5s
 ```
 
-### 3. Grafana дашборды
+### 3. Ключевые метрики Grafana
 
 ```json
 {
@@ -468,26 +428,26 @@ scrape_configs:
 
 ## Troubleshooting
 
-### 1. Частые проблемы
+### 1. Диагностика
 
 ```bash
-# Проверка статуса брокеров
+# Доступность брокеров
 kafka-broker-api-versions.sh --bootstrap-server localhost:9092
 
-# Проверка топиков
+# Описание топика
 kafka-topics.sh --describe --topic test-topic --bootstrap-server localhost:9092
 
-# Проверка consumer groups
+# Consumer groups
 kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list
 
-# Проверка логов
+# Логи
 tail -f /var/log/kafka/server.log
 ```
 
 ### 2. Диагностика производительности
 
 ```bash
-# Тест производительности producer
+# Тест producer
 kafka-producer-perf-test.sh \
   --topic test-topic \
   --num-records 1000000 \
@@ -495,7 +455,7 @@ kafka-producer-perf-test.sh \
   --throughput 10000 \
   --bootstrap-server localhost:9092
 
-# Тест производительности consumer
+# Тест consumer
 kafka-consumer-perf-test.sh \
   --topic test-topic \
   --bootstrap-server localhost:9092 \
@@ -505,13 +465,13 @@ kafka-consumer-perf-test.sh \
 ### 3. Восстановление после сбоев
 
 ```bash
-# Перебалансировка партиций
+# Перебалансировка лидеров партиций
 kafka-leader-election.sh \
   --bootstrap-server localhost:9092 \
   --election-type PREFERRED \
   --all-topic-partitions
 
-# Проверка репликации
+# Проверка отстающих реплик
 kafka-topics.sh --describe --under-replicated-partitions \
   --bootstrap-server localhost:9092
 ```
@@ -519,55 +479,42 @@ kafka-topics.sh --describe --under-replicated-partitions \
 ## Вопросы для собеседования
 
 ### Базовые вопросы
-1. **Какие способы установки Kafka вы знаете?**
-   - Docker, standalone, кластер, managed services
-   - Каждый имеет свои преимущества и недостатки
+1. **Какие способы установки Kafka?**
+   - Docker, standalone, кластер, managed services (AWS MSK, Confluent Cloud)
 
 2. **Что такое KRaft mode?**
-   - Режим работы Kafka без ZooKeeper
-   - Использует встроенный consensus protocol
-   - Доступен с версии 2.8
+   - Режим без ZooKeeper, Kafka сама управляет метаданными через Raft
+   - Доступен с версии 2.8, рекомендован с 3.3+
 
 3. **Как настроить высокую доступность?**
-   - Минимум 3 брокера
-   - Replication factor = 3
-   - Настройка min.insync.replicas
+   - Минимум 3 брокера, replication factor = 3, `min.insync.replicas=2`
 
 ### Продвинутые вопросы
 4. **Как настроить безопасность в Kafka?**
-   - SSL/TLS для шифрования
-   - SASL для аутентификации
+   - SSL/TLS для шифрования трафика
+   - SASL для аутентификации (PLAIN, SCRAM, Kerberos)
    - ACL для авторизации
 
 5. **Как мониторить производительность?**
-   - JMX метрики
-   - Prometheus + Grafana
-   - Кастомные дашборды
+   - JMX метрики → Prometheus → Grafana
+   - Ключевые метрики: `MessagesInPerSec`, `BytesInPerSec`, consumer lag
 
 6. **Как диагностировать проблемы в кластере?**
-   - Проверка логов
-   - Анализ метрик
-   - Использование CLI инструментов
+   - `kafka-topics.sh --describe --under-replicated-partitions`
+   - `kafka-consumer-groups.sh --describe` для проверки lag
+   - Анализ логов в `/var/log/kafka/server.log`
 
 ### Практические вопросы
 7. **Как настроить retention policy?**
-   - По времени: log.retention.hours
-   - По размеру: log.retention.bytes
-   - Комбинированный подход
+   - По времени: `log.retention.hours` (на уровне брокера) или `retention.ms` (на уровне топика)
+   - По размеру: `log.retention.bytes` / `retention.bytes`
 
 8. **Как оптимизировать производительность?**
-   - Настройка буферов
-   - Оптимизация количества партиций
-   - Настройка batch size
+   - Увеличить `batch.size` и `linger.ms` у producer
+   - Настроить `num.io.threads` и `num.network.threads` на брокере
+   - Выбрать правильное число партиций
 
 9. **Как обеспечить отказоустойчивость?**
-   - Правильная настройка репликации
-   - Мониторинг in-sync replicas
-   - Автоматическое восстановление
-
----
-
-**Дополнительные ресурсы:**
-- [Kafka Configuration](https://kafka.apache.org/documentation/#configuration)
-- [Kafka Security](https://kafka.apache.org/documentation/#security)
-- [Kafka Monitoring](https://kafka.apache.org/documentation/#monitoring) 
+   - `replication.factor=3`, `min.insync.replicas=2`
+   - `acks=all` на producer
+   - Мониторинг in-sync replicas (ISR)

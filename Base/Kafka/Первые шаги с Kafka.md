@@ -1,5 +1,7 @@
 # Первые шаги с Apache Kafka: практическое руководство
 
+> [!QUOTE] Consumer Group — группа консьюмеров, которые совместно читают топик. Каждая партиция назначается ровно одному консьюмеру в группе. Это обеспечивает параллельную обработку и балансировку нагрузки.
+
 ## Оглавление
 1. [Подготовка окружения](#подготовка)
 2. [Создание топиков](#топики)
@@ -14,9 +16,8 @@
 
 ### 1. Запуск Kafka через Docker
 
-```bash
-# Создание docker-compose.yml
-cat > docker-compose.yml << EOF
+```yaml
+# docker-compose.yml
 version: '3.8'
 services:
   zookeeper:
@@ -58,12 +59,10 @@ volumes:
   zookeeper-data:
   zookeeper-logs:
   kafka-data:
-EOF
+```
 
-# Запуск сервисов
+```bash
 docker-compose up -d
-
-# Проверка статуса
 docker-compose ps
 ```
 
@@ -84,14 +83,13 @@ docker exec -it kafka kafka-topics --list \
 ### 1. Базовое создание топика
 
 ```bash
-# Создание простого топика
 docker exec -it kafka kafka-topics --create \
   --topic my-first-topic \
   --bootstrap-server localhost:9092 \
   --partitions 3 \
   --replication-factor 1
 
-# Проверка созданного топика
+# Проверка
 docker exec -it kafka kafka-topics --describe \
   --topic my-first-topic \
   --bootstrap-server localhost:9092
@@ -100,7 +98,7 @@ docker exec -it kafka kafka-topics --describe \
 ### 2. Создание топика с настройками
 
 ```bash
-# Создание топика с retention policy
+# С retention policy
 docker exec -it kafka kafka-topics --create \
   --topic events-topic \
   --bootstrap-server localhost:9092 \
@@ -109,7 +107,7 @@ docker exec -it kafka kafka-topics --create \
   --config retention.ms=86400000 \
   --config retention.bytes=1073741824
 
-# Создание топика с cleanup policy
+# С compact cleanup policy
 docker exec -it kafka kafka-topics --create \
   --topic compacted-topic \
   --bootstrap-server localhost:9092 \
@@ -119,6 +117,8 @@ docker exec -it kafka kafka-topics --create \
   --config delete.retention.ms=86400000
 ```
 
+> [!INFO] `cleanup.policy=compact` — Kafka хранит только последнее сообщение для каждого ключа. Используется для хранения актуального состояния (например, профили пользователей).
+
 ### 3. Управление топиками
 
 ```bash
@@ -126,12 +126,7 @@ docker exec -it kafka kafka-topics --create \
 docker exec -it kafka kafka-topics --list \
   --bootstrap-server localhost:9092
 
-# Детальная информация о топике
-docker exec -it kafka kafka-topics --describe \
-  --topic my-first-topic \
-  --bootstrap-server localhost:9092
-
-# Увеличение количества партиций
+# Увеличение количества партиций (уменьшить нельзя!)
 docker exec -it kafka kafka-topics --alter \
   --topic my-first-topic \
   --partitions 6 \
@@ -143,40 +138,36 @@ docker exec -it kafka kafka-topics --delete \
   --bootstrap-server localhost:9092
 ```
 
+> [!WARNING] Количество партиций можно только увеличивать, но не уменьшать. После увеличения перераспределение сообщений по партициям меняется — существующие данные остаются в старых партициях.
+
 ## Простой Producer
 
 ### 1. Консольный Producer
 
 ```bash
-# Запуск консольного producer
 docker exec -it kafka kafka-console-producer \
   --topic my-first-topic \
   --bootstrap-server localhost:9092
-
-# В консоли можно вводить сообщения:
-# {"user": "alice", "action": "login", "timestamp": "2024-01-01T10:00:00Z"}
-# {"user": "bob", "action": "logout", "timestamp": "2024-01-01T10:05:00Z"}
+# Вводим сообщения построчно, Enter — отправить
 ```
 
 ### 2. Producer с ключами
 
 ```bash
-# Producer с указанием ключей
 docker exec -it kafka kafka-console-producer \
   --topic my-first-topic \
   --bootstrap-server localhost:9092 \
   --property "parse.key=true" \
   --property "key.separator=:"
 
-# Ввод сообщений с ключами:
+# Формат ввода:
 # user-123:{"action": "login", "timestamp": "2024-01-01T10:00:00Z"}
 # user-456:{"action": "logout", "timestamp": "2024-01-01T10:05:00Z"}
 ```
 
-### 3. Producer с настройками
+### 3. Producer с настройками надёжности
 
 ```bash
-# Producer с настройками производительности
 docker exec -it kafka kafka-console-producer \
   --topic my-first-topic \
   --bootstrap-server localhost:9092 \
@@ -191,13 +182,13 @@ docker exec -it kafka kafka-console-producer \
 ### 1. Консольный Consumer
 
 ```bash
-# Запуск консольного consumer
+# Читать с начала
 docker exec -it kafka kafka-console-consumer \
   --topic my-first-topic \
   --bootstrap-server localhost:9092 \
   --from-beginning
 
-# Просмотр сообщений с метаданными
+# С метаданными
 docker exec -it kafka kafka-console-consumer \
   --topic my-first-topic \
   --bootstrap-server localhost:9092 \
@@ -207,10 +198,9 @@ docker exec -it kafka kafka-console-consumer \
   --property "print.value=true"
 ```
 
-### 2. Consumer с настройками
+### 2. Consumer с настройками группы
 
 ```bash
-# Consumer с настройками группы
 docker exec -it kafka kafka-console-consumer \
   --topic my-first-topic \
   --bootstrap-server localhost:9092 \
@@ -223,7 +213,6 @@ docker exec -it kafka kafka-console-consumer \
 ### 3. Consumer для конкретной партиции
 
 ```bash
-# Чтение из конкретной партиции
 docker exec -it kafka kafka-console-consumer \
   --topic my-first-topic \
   --bootstrap-server localhost:9092 \
@@ -236,7 +225,6 @@ docker exec -it kafka kafka-console-consumer \
 ### 1. Создание Consumer Group
 
 ```bash
-# Запуск consumer в группе
 docker exec -it kafka kafka-console-consumer \
   --topic my-first-topic \
   --bootstrap-server localhost:9092 \
@@ -247,16 +235,16 @@ docker exec -it kafka kafka-console-consumer \
 ### 2. Управление Consumer Groups
 
 ```bash
-# Список consumer groups
+# Список групп
 docker exec -it kafka kafka-consumer-groups --list \
   --bootstrap-server localhost:9092
 
-# Детальная информация о группе
+# Детали группы: партиции, offset, lag
 docker exec -it kafka kafka-consumer-groups --describe \
   --group my-group \
   --bootstrap-server localhost:9092
 
-# Сброс offset для группы
+# Сброс offset (для перечитывания сообщений)
 docker exec -it kafka kafka-consumer-groups --reset-offsets \
   --group my-group \
   --topic my-first-topic \
@@ -268,7 +256,9 @@ docker exec -it kafka kafka-consumer-groups --reset-offsets \
 ### 3. Масштабирование Consumer Groups
 
 ```bash
-# Запуск нескольких consumer'ов в одной группе
+# Запустить несколько консьюмеров в одной группе (в разных терминалах)
+# Kafka автоматически распределит партиции между ними
+
 # Терминал 1:
 docker exec -it kafka kafka-console-consumer \
   --topic my-first-topic \
@@ -280,38 +270,34 @@ docker exec -it kafka kafka-console-consumer \
   --topic my-first-topic \
   --bootstrap-server localhost:9092 \
   --group my-group
-
-# Проверка распределения партиций
-docker exec -it kafka kafka-consumer-groups --describe \
-  --group my-group \
-  --bootstrap-server localhost:9092
 ```
+
+> [!WARNING] Количество активных консьюмеров в группе не должно превышать количество партиций в топике. Лишние консьюмеры будут простаивать без назначенных партиций.
 
 ## Практические примеры
 
 ### 1. Система логирования
 
 ```bash
-# Создание топика для логов
+# Топик для логов
 docker exec -it kafka kafka-topics --create \
   --topic application-logs \
   --bootstrap-server localhost:9092 \
   --partitions 3 \
   --replication-factor 1
 
-# Producer для логов
+# Producer (ключ — уровень лога)
 docker exec -it kafka kafka-console-producer \
   --topic application-logs \
   --bootstrap-server localhost:9092 \
   --property "parse.key=true" \
   --property "key.separator=:"
 
-# Ввод логов:
+# Ввод:
 # ERROR:{"level": "ERROR", "message": "Database connection failed", "timestamp": "2024-01-01T10:00:00Z"}
 # INFO:{"level": "INFO", "message": "User logged in", "timestamp": "2024-01-01T10:01:00Z"}
-# WARN:{"level": "WARN", "message": "High memory usage", "timestamp": "2024-01-01T10:02:00Z"}
 
-# Consumer для обработки логов
+# Consumer
 docker exec -it kafka kafka-console-consumer \
   --topic application-logs \
   --bootstrap-server localhost:9092 \
@@ -323,63 +309,44 @@ docker exec -it kafka kafka-console-consumer \
 ### 2. Система событий пользователей
 
 ```bash
-# Создание топика для событий
 docker exec -it kafka kafka-topics --create \
   --topic user-events \
   --bootstrap-server localhost:9092 \
   --partitions 5 \
   --replication-factor 1
 
-# Producer для событий
+# Ключ = user-id, так все события одного пользователя попадают в одну партицию
 docker exec -it kafka kafka-console-producer \
   --topic user-events \
   --bootstrap-server localhost:9092 \
   --property "parse.key=true" \
   --property "key.separator=:"
 
-# Ввод событий:
+# Ввод:
 # user-123:{"event": "login", "timestamp": "2024-01-01T10:00:00Z", "ip": "192.168.1.1"}
 # user-456:{"event": "purchase", "timestamp": "2024-01-01T10:05:00Z", "amount": 99.99}
-# user-123:{"event": "logout", "timestamp": "2024-01-01T10:10:00Z", "session_duration": 600}
-
-# Consumer для аналитики
-docker exec -it kafka kafka-console-consumer \
-  --topic user-events \
-  --bootstrap-server localhost:9092 \
-  --group analytics-processor \
-  --property "print.key=true" \
-  --property "print.value=true"
 ```
 
 ### 3. Система уведомлений
 
 ```bash
-# Создание топика для уведомлений
 docker exec -it kafka kafka-topics --create \
   --topic notifications \
   --bootstrap-server localhost:9092 \
   --partitions 3 \
   --replication-factor 1
 
-# Producer для уведомлений
+# Ключ = тип уведомления
 docker exec -it kafka kafka-console-producer \
   --topic notifications \
   --bootstrap-server localhost:9092 \
   --property "parse.key=true" \
   --property "key.separator=:"
 
-# Ввод уведомлений:
-# email:{"type": "email", "to": "user@example.com", "subject": "Welcome", "body": "Welcome to our service"}
+# Ввод:
+# email:{"type": "email", "to": "user@example.com", "subject": "Welcome"}
 # sms:{"type": "sms", "to": "+1234567890", "message": "Your order has been shipped"}
-# push:{"type": "push", "device_id": "device-123", "title": "New message", "body": "You have a new message"}
-
-# Consumer для отправки уведомлений
-docker exec -it kafka kafka-console-consumer \
-  --topic notifications \
-  --bootstrap-server localhost:9092 \
-  --group notification-sender \
-  --property "print.key=true" \
-  --property "print.value=true"
+# push:{"type": "push", "device_id": "device-123", "title": "New message"}
 ```
 
 ## Отладка и мониторинг
@@ -387,17 +354,17 @@ docker exec -it kafka kafka-console-consumer \
 ### 1. Проверка состояния топиков
 
 ```bash
-# Детальная информация о топике
+# Детальная информация
 docker exec -it kafka kafka-topics --describe \
   --topic my-first-topic \
   --bootstrap-server localhost:9092
 
-# Проверка under-replicated партиций
+# Партиции с отставанием репликации
 docker exec -it kafka kafka-topics --describe \
   --under-replicated-partitions \
   --bootstrap-server localhost:9092
 
-# Проверка недоступных партиций
+# Недоступные партиции
 docker exec -it kafka kafka-topics --describe \
   --unavailable-partitions \
   --bootstrap-server localhost:9092
@@ -406,26 +373,22 @@ docker exec -it kafka kafka-topics --describe \
 ### 2. Мониторинг Consumer Groups
 
 ```bash
-# Список всех групп
+# Список групп
 docker exec -it kafka kafka-consumer-groups --list \
   --bootstrap-server localhost:9092
 
-# Детальная информация о группе
+# Детали группы: CURRENT-OFFSET, LOG-END-OFFSET, LAG
 docker exec -it kafka kafka-consumer-groups --describe \
   --group my-group \
   --bootstrap-server localhost:9092
-
-# Проверка lag (отставания)
-docker exec -it kafka kafka-consumer-groups --describe \
-  --group my-group \
-  --bootstrap-server localhost:9092 \
-  --members
 ```
+
+> [!INFO] **Consumer lag** — разница между LOG-END-OFFSET (последнее сообщение в партиции) и CURRENT-OFFSET (последнее обработанное). Большой lag означает, что консьюмер не справляется с нагрузкой.
 
 ### 3. Тестирование производительности
 
 ```bash
-# Тест producer
+# Тест producer (100 000 сообщений по 1KB, 10K/сек)
 docker exec -it kafka kafka-producer-perf-test \
   --topic performance-test \
   --num-records 100000 \
@@ -443,20 +406,15 @@ docker exec -it kafka kafka-consumer-perf-test \
 ### 4. Просмотр логов
 
 ```bash
-# Логи Kafka
 docker logs kafka
-
-# Логи ZooKeeper
 docker logs zookeeper
-
-# Логи в реальном времени
-docker logs -f kafka
+docker logs -f kafka  # в реальном времени
 ```
 
 ## Вопросы для собеседования
 
 ### Базовые вопросы
-1. **Как создать топик в Kafka?**
+1. **Как создать топик?**
    ```bash
    kafka-topics --create --topic my-topic \
      --bootstrap-server localhost:9092 \
@@ -464,30 +422,28 @@ docker logs -f kafka
    ```
 
 2. **Что такое consumer group?**
-   - Группа consumer'ов, которые совместно обрабатывают сообщения
+   - Группа консьюмеров, совместно читающих топик
+   - Каждая партиция назначается одному консьюмеру в группе
    - Обеспечивает масштабируемость и отказоустойчивость
-   - Каждая партиция обрабатывается только одним consumer'ом в группе
 
 3. **Как работает партиционирование?**
-   - Сообщения распределяются по партициям на основе ключа
-   - Сообщения с одинаковым ключом попадают в одну партицию
-   - Обеспечивает параллельную обработку
+   - По ключу: `hash(key) % num_partitions`
+   - Без ключа: round-robin по партициям
+   - Одинаковый ключ — всегда одна партиция
 
 ### Продвинутые вопросы
 4. **Как обеспечить порядок сообщений?**
-   - Использование ключей для партиционирования
-   - Одна партиция = гарантированный порядок
-   - Consumer group с одним consumer'ом
+   - Использовать ключ для партиционирования
+   - Порядок гарантирован только внутри одной партиции
 
 5. **Что такое offset и как он работает?**
    - Уникальный идентификатор сообщения в партиции
-   - Consumer отслеживает свой прогресс через offset
-   - Автоматический или ручной commit
+   - Consumer хранит offset прочитанных сообщений
+   - Автоматический commit (`enable.auto.commit=true`) или ручной
 
-6. **Как масштабировать consumer'ы?**
-   - Добавление consumer'ов в группу
-   - Автоматическое перераспределение партиций
-   - Количество consumer'ов не должно превышать количество партиций
+6. **Как масштабировать консьюмеры?**
+   - Добавить консьюмеров в группу (не более числа партиций)
+   - Kafka автоматически перераспределит партиции (rebalance)
 
 ### Практические вопросы
 7. **Как отладить проблемы с consumer group?**
@@ -504,13 +460,6 @@ docker logs -f kafka
    ```
 
 9. **Как настроить retention policy?**
-   - По времени: retention.ms
-   - По размеру: retention.bytes
-   - Комбинированный подход
-
----
-
-**Дополнительные ресурсы:**
-- [Kafka Quick Start](https://kafka.apache.org/quickstart)
-- [Kafka Console Producer/Consumer](https://kafka.apache.org/documentation/#basic_ops_console_producer_consumer)
-- [Kafka Consumer Groups](https://kafka.apache.org/documentation/#consumerconfigs) 
+   - По времени: `retention.ms` (например, 86400000 = 1 день)
+   - По размеру: `retention.bytes`
+   - Применяется на уровне топика или брокера

@@ -429,8 +429,7 @@ public class Person {
 
 ## Современные возможности (Java 14+)
 
-> **Подробнее о современных возможностях Java (Pattern Matching, Sealed-классы, Records) см. в статье [Современные возможности Java](../Современные%20возможности%20Java.md).**
-> **Подробнее о стримах см. в разделе [Stream API и коллекции](../3.%20Коллекции%20и%20Stream%20API/Stream%20API.md).**
+Подробнее: [[Современные возможности Java]], [[Java Stream API]].
 
 ## Сравнение с альтернативами
 
@@ -543,163 +542,10 @@ public class Person {
     ```
     
 
-## Пример: Комплексное использование
+## Связанные темы
 
-```java
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
-
-// Класс с полной реализацией методов Object
-public class Person implements Cloneable {
-    private final String name;
-    private final int age;
-    private final Address address; // Композиция
-    private final Object lock = new Object();
-    private static final Logger LOGGER = Logger.getLogger(Person.class.getName());
-
-    public Person(String name, int age, Address address) {
-        this.name = name;
-        this.age = age;
-        this.address = address;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        Person other = (Person) obj;
-        return age == other.age && Objects.equals(name, other.name) && Objects.equals(address, other.address);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(name, age, address);
-    }
-
-    @Override
-    public String toString() {
-        return "Person{name='" + name + "', age=" + age + ", address=" + address + "}";
-    }
-
-    @Override
-    public Person clone() throws CloneNotSupportedException {
-        Person cloned = (Person) super.clone();
-        cloned.address = new Address(address.city); // Глубокое копирование
-        return cloned;
-    }
-
-    public synchronized void waitForUpdate() throws InterruptedException {
-        synchronized (lock) {
-            lock.wait();
-        }
-    }
-
-    public synchronized void notifyUpdate() {
-        synchronized (lock) {
-            lock.notify();
-        }
-    }
-}
-
-// Компонент для композиции
-public class Address {
-    String city;
-
-    public Address(String city) {
-        this.city = city;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof Address a && Objects.equals(city, a.city);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(city);
-    }
-
-    @Override
-    public String toString() {
-        return "Address{city='" + city + "'}";
-    }
-}
-
-// Демонстрация
-public class ObjectExample {
-    private static final Logger LOGGER = Logger.getLogger(ObjectExample.class.getName());
-
-    public static void main(String[] args) throws CloneNotSupportedException {
-        // Создание объекта
-        Address address = new Address("Москва");
-        Person person = new Person("Алиса", 25, address);
-
-        // toString
-        System.out.println(person); // Person{name='Алиса', age=25, address=Address{city='Москва'}}
-
-        // equals и hashCode
-        Person person2 = new Person("Алиса", 25, new Address("Москва"));
-        System.out.println(person.equals(person2)); // true
-        System.out.println(person.hashCode() == person2.hashCode()); // true
-
-        // getClass
-        System.out.println(person.getClass()); // class Person
-
-        // clone
-        Person cloned = person.clone();
-        System.out.println(person != cloned); // true
-        System.out.println(person.equals(cloned)); // true
-
-        // Многопоточность
-        ConcurrentHashMap<Person, String> map = new ConcurrentHashMap<>();
-        map.put(person, "Персона 1");
-        new Thread(() -> {
-            try {
-                person.waitForUpdate();
-                LOGGER.info("Обновление получено: " + person);
-            } catch (InterruptedException e) {}
-        }).start();
-        new Thread(() -> {
-            person.notifyUpdate();
-        }).start();
-
-        // Pattern matching
-        Object obj = person;
-        if (obj instanceof Person p) {
-            LOGGER.info("Pattern matching: " + p);
-        }
-    }
-}
-```
-
-**Предполагаемый вывод**:
-
-```
-Person{name='Алиса', age=25, address=Address{city='Москва'}}
-true
-true
-class Person
-true
-true
-INFO: Pattern matching: Person{name='Алиса', age=25, address=Address{city='Москва'}}
-INFO: Обновление получено: Person{name='Алиса', age=25, address=Address{city='Москва'}}
-```
-
-## Вопросы для собеседования
-
-1. Какую роль играет класс Object в иерархии Java?
-2. Какие методы определяет Object и зачем их переопределять?
-3. Как работает контракт equals/hashCode?
-4. Как реализован метод clone и когда его использовать?
-5. Почему finalize считается устаревшим?
-6. Как работают wait/notify/notifyAll и для чего они нужны?
-7. Как реализован Object в JVM (vtable, заголовок объекта)?
-8. Как обеспечить потокобезопасность equals/hashCode?
-9. Чем record-классы отличаются от обычных классов с точки зрения Object?
-10. Какие подводные камни связаны с изменяемыми полями в equals/hashCode?
-11. Как работает getClass и зачем он нужен?
-12. Как реализовать глубокое копирование объекта?
-13. Как использовать Object в коллекциях?
-14. Как тестировать корректность equals/hashCode?
-15. Какие современные возможности Java упрощают работу с Object?
+- [[Наследование]] — каждый класс наследует Object
+- [[Интерфейсы]] — Cloneable, Comparable
+- [[Java Reflection API]] — getClass() и интроспекция
+- [[Современные возможности Java]] — records, pattern matching
+- [[Java Stream API]] — обработка коллекций объектов

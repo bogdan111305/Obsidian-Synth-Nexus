@@ -1,39 +1,44 @@
-# Пул соединений в JDBC: Полное руководство
+# Пул соединений в JDBC
+
+> [!QUOTE] Connection Pool — кэш готовых объектов `Connection`. Приложение берёт соединение из пула и возвращает обратно вместо закрытия. Это устраняет накладные расходы на TCP-handshake и аутентификацию при каждом запросе.
 
 ## Оглавление
-1. [Что такое пул соединений?](#что-это)
-2. [Зачем нужен пул?](#зачем)
-3. [Обзор популярных пулов (HikariCP, DBCP, c3p0)](#обзор)
-4. [Установка и настройка](#установка)
-5. [Примеры использования](#примеры)
-6. [Архитектура и внутреннее устройство](#архитектура)
-7. [Многопоточность и оптимизация](#многопоточность)
-8. [Работа с транзакциями](#транзакции)
-9. [Ошибки, диагностика и мониторинг](#ошибки)
-10. [Безопасность](#безопасность)
-11. [Интеграция с Spring](#spring)
-12. [Best practices](#best-practices)
-13. [FAQ и вопросы для собеседования](#faq)
+1. [[#Зачем нужен пул]]
+2. [[#Популярные пулы]]
+3. [[#Настройка HikariCP]]
+4. [[#Ключевые параметры]]
+5. [[#Многопоточность]]
+6. [[#Работа с транзакциями]]
+7. [[#Мониторинг и диагностика]]
+8. [[#Интеграция с Spring]]
+9. [[#Best practices]]
+10. [[#Вопросы для собеседования]]
 
 ---
 
-## 1. Что такое пул соединений? <a name="что-это"></a>
-Пул соединений — это кэш объектов `Connection`, которые заранее создаются и поддерживаются в готовом состоянии для повторного использования. Это минимизирует накладные расходы на установку новых соединений и повышает производительность.
+## Зачем нужен пул
 
-## 2. Зачем нужен пул? <a name="зачем"></a>
-- Ускоряет работу за счёт сокращения времени на установку соединений
-- Повторное использование ресурсов
-- Масштабируемость для многопоточных приложений
-- Контроль над количеством одновременных соединений
+Создание нового `Connection` — дорогостоящая операция (TCP, SSL handshake, аутентификация, ~50-200 мс).
 
-## 3. Обзор популярных пулов <a name="обзор"></a>
-- **HikariCP** — быстрый, лёгкий, современный (рекомендуется)
-- **Apache DBCP** — стабильный, интеграция с Tomcat
-- **c3p0** — старый, но до сих пор используется
+Без пула: каждый запрос = новое соединение = latency + нагрузка на СУБД.
+С пулом: соединения переиспользуются, latency близка к нулю.
 
-## 4. Установка и настройка <a name="установка"></a>
-- Добавьте зависимость (Maven/Gradle)
-- Пример для HikariCP:
+> [!WARNING] Прямой вызов `DriverManager.getConnection()` в production без пула — антипаттерн. При нагрузке СУБД получает шквал новых соединений и падает.
+
+---
+
+## Популярные пулы
+
+- **HikariCP** — быстрый, лёгкий, минимальный overhead. **Рекомендуется**, дефолт в Spring Boot
+- **Apache DBCP2** — стабильный, хорошо интегрируется с Tomcat
+- **c3p0** — устаревший, но ещё встречается в legacy-проектах
+
+---
+
+## Настройка HikariCP
+
+Maven-зависимость:
+
 ```xml
 <dependency>
     <groupId>com.zaxxer</groupId>
@@ -41,62 +46,104 @@
     <version>5.1.0</version>
 </dependency>
 ```
-- Настройте параметры: URL, user, password, maximumPoolSize, minimumIdle, connectionTimeout, idleTimeout, maxLifetime, connectionTestQuery
 
-## 5. Примеры использования <a name="примеры"></a>
-### Программная конфигурация HikariCP
+Программная конфигурация:
+
 ```java
 HikariConfig config = new HikariConfig();
 config.setJdbcUrl("jdbc:mysql://localhost:3306/mydb");
-config.setUsername("root");
-config.setPassword("password");
+config.setUsername("app_user");
+config.setPassword(System.getenv("DB_PASSWORD"));
 config.setMaximumPoolSize(10);
 config.setMinimumIdle(5);
-config.setConnectionTimeout(30000);
-config.setIdleTimeout(30000);
-config.setMaxLifetime(1800000);
+config.setConnectionTimeout(30000);     // мс — ждать свободное соединение
+config.setIdleTimeout(600000);          // мс — убрать простаивающее соединение
+config.setMaxLifetime(1800000);         // мс — максимальное время жизни соединения
 config.setConnectionTestQuery("SELECT 1");
+
 HikariDataSource ds = new HikariDataSource(config);
 ```
-### Использование с try-with-resources
+
+Использование:
+
 ```java
 try (Connection conn = ds.getConnection()) {
-    // Работа с БД
+    // работа с БД
+} // соединение автоматически возвращается в пул
+```
+
+---
+
+## Ключевые параметры
+
+| Параметр | Описание | Рекомендация |
+|----------|----------|--------------|
+| `maximumPoolSize` | Максимум соединений в пуле | CPU × 2 + количество дисков |
+| `minimumIdle` | Минимум простаивающих | Равно `maximumPoolSize` для стабильной нагрузки |
+| `connectionTimeout` | Ожидание свободного соединения | 20000–30000 мс |
+| `idleTimeout` | Время жизни простаивающего | 600000 мс |
+| `maxLifetime` | Максимальный возраст соединения | 1800000 мс (меньше, чем wait_timeout СУБД) |
+| `connectionTestQuery` | Проверка живого соединения | `SELECT 1` |
+
+> [!WARNING] `maxLifetime` должен быть **меньше** `wait_timeout` на стороне СУБД. Иначе СУБД закроет соединение раньше, чем пул узнает об этом — получите `Connection is closed` в runtime.
+
+---
+
+## Многопоточность
+
+- Каждый поток берёт соединение из пула, использует и возвращает
+- Не передавайте объект `Connection` между потоками — состояние соединения (autocommit, транзакция) не thread-safe
+
+> [!WARNING] Передача одного `Connection` между несколькими потоками вызывает гонки состояний и непредсказуемое поведение транзакций.
+
+---
+
+## Работа с транзакциями
+
+Транзакции работают в рамках одного `Connection`. При возврате соединения в пул HikariCP сбрасывает его состояние.
+
+```java
+try (Connection conn = ds.getConnection()) {
+    conn.setAutoCommit(false);
+    try {
+        // SQL операции
+        conn.commit();
+    } catch (SQLException e) {
+        conn.rollback();
+        throw e;
+    }
 }
 ```
 
-## 6. Архитектура и внутреннее устройство <a name="архитектура"></a>
-- PoolBase, HikariPool, ProxyConnection, ConcurrentBag (для HikariCP)
-- Потокобезопасность, минимизация блокировок
-- Кэширование PreparedStatement
+> [!INFO] HikariCP автоматически вызывает `rollback()` при возврате соединения с незавершённой транзакцией.
 
-## 7. Многопоточность и оптимизация <a name="многопоточность"></a>
-- Ограничение maximumPoolSize
-- Таймауты (connectionTimeout)
-- Мониторинг активных соединений
-- Пример с ExecutorService для многопоточных запросов
+Подробнее о транзакциях: [[Транзакции в JDBC]]
 
-## 8. Работа с транзакциями <a name="транзакции"></a>
-- Управление транзакциями через Connection (setAutoCommit, commit, rollback)
-- Пример передачи соединения между потоками (не рекомендуется)
-- Использование savepoints
+---
 
-## 9. Ошибки, диагностика и мониторинг <a name="ошибки"></a>
-- Типовые ошибки: исчерпание пула, утечки соединений, deadlock, timeout
-- Диагностика: логирование, метрики HikariCP, интеграция с Prometheus/Grafana
-- Пример логирования:
+## Мониторинг и диагностика
+
+Типовые проблемы:
+- **Исчерпание пула** — все соединения заняты, новые запросы ждут `connectionTimeout` и падают с исключением
+- **Утечка соединений** — соединение взято из пула, но не возвращено (забыли `close()`)
+- **Deadlock** — два потока ждут соединений, занятых друг другом
+
+Диагностика:
+
 ```java
-logger.info("Соединение выдано из пула");
+HikariPoolMXBean poolMXBean = ds.getHikariPoolMXBean();
+System.out.println("Active: " + poolMXBean.getActiveConnections());
+System.out.println("Idle: " + poolMXBean.getIdleConnections());
+System.out.println("Total: " + poolMXBean.getTotalConnections());
+System.out.println("Waiting: " + poolMXBean.getThreadsAwaitingConnection());
 ```
 
-## 10. Безопасность <a name="безопасность"></a>
-- Не храните пароли в коде, используйте переменные окружения/секреты
-- Настройте SSL для защищённого соединения
-- Ограничьте доступ к пулу по IP/Firewall
+> [!INFO] HikariCP интегрируется с Micrometer/Prometheus — метрики пула доступны через `/actuator/metrics` в Spring Boot.
 
-## 11. Интеграция с Spring <a name="spring"></a>
-- Используйте DataSource и JdbcTemplate
-- Пример:
+---
+
+## Интеграция с Spring
+
 ```java
 @Configuration
 public class JdbcConfig {
@@ -105,10 +152,11 @@ public class JdbcConfig {
         HikariDataSource ds = new HikariDataSource();
         ds.setJdbcUrl("jdbc:mysql://localhost:3306/mydb");
         ds.setUsername("root");
-        ds.setPassword("password");
+        ds.setPassword(System.getenv("DB_PASSWORD"));
         ds.setMaximumPoolSize(10);
         return ds;
     }
+
     @Bean
     public JdbcTemplate jdbcTemplate(DataSource ds) {
         return new JdbcTemplate(ds);
@@ -116,33 +164,43 @@ public class JdbcConfig {
 }
 ```
 
-## 12. Best practices <a name="best-practices"></a>
-- Используйте try-with-resources для автоматического возврата соединения
-- Настраивайте pool size под нагрузку
-- Включайте connectionTestQuery для проверки соединений
-- Мониторьте метрики пула
-- Не передавайте Connection между потоками
-- Логируйте ошибки и события пула
+В Spring Boot достаточно указать параметры в `application.properties`:
 
-## 13. FAQ и вопросы для собеседования <a name="faq"></a>
-### Часто задаваемые вопросы
-- Как выбрать пул для своего приложения?
-- Как настроить параметры пула?
-- Как диагностировать утечку соединений?
-- Как интегрировать пул с Spring?
-- Как мониторить пул?
-
-### Вопросы для собеседования
-1. Зачем нужен пул соединений?
-2. Как работает HikariCP?
-3. Как настроить параметры пула?
-4. Как диагностировать и устранять утечки соединений?
-5. Как пул работает с транзакциями?
-6. Как интегрировать пул с Spring?
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/mydb
+spring.datasource.username=root
+spring.datasource.password=${DB_PASSWORD}
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.minimum-idle=5
+```
 
 ---
 
-**Рекомендуемые материалы:**
+## Best practices
+
+- `try-with-resources` для автоматического возврата соединения в пул
+- Настраивайте `maximumPoolSize` под реальную нагрузку
+- `maxLifetime` < `wait_timeout` СУБД
+- Включайте `connectionTestQuery` для проверки живости соединений
+- Мониторьте метрики пула (активные, ожидающие, утечки)
+- Не передавайте `Connection` между потоками
+
+---
+
+## Вопросы для собеседования
+
+1. Зачем нужен пул соединений?
+2. Как работает HikariCP внутри?
+3. Что произойдёт, если пул исчерпан?
+4. Как диагностировать утечку соединений?
+5. Как пул работает с транзакциями?
+6. Какие параметры настраивать в первую очередь?
+
+---
+
+**Связанные заметки:** [[Основы]] | [[Транзакции в JDBC]] | [[Безопасность в JDBC]] | [[Ошибки и диагностика в JDBC]]
+
+**Материалы:**
 - [HikariCP Documentation](https://github.com/brettwooldridge/HikariCP)
+- [HikariCP Pool Sizing](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing)
 - [Spring JdbcTemplate](https://docs.spring.io/spring-framework/docs/current/reference/html/data-access.html#jdbc)
-- [Monitoring HikariCP](https://github.com/brettwooldridge/HikariCP#monitoring)

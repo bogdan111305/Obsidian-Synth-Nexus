@@ -1,114 +1,193 @@
-# Транзакции в JDBC: Полное руководство
+# Транзакции в JDBC
+
+> [!QUOTE] Транзакция — группа SQL-операций, которые выполняются как единое целое: либо все успешно, либо все откатываются. Гарантии — ACID: Atomicity, Consistency, Isolation, Durability.
 
 ## Оглавление
-1. [Что такое транзакция? ACID](#acid)
-2. [Управление транзакциями в JDBC](#управление)
-3. [Уровни изоляции транзакций](#изоляция)
-4. [Savepoints и вложенные транзакции](#savepoints)
-5. [Интеграция с Spring](#spring)
-6. [Распределённые транзакции (XA, Saga)](#распределённые)
-7. [Ошибки и диагностика](#ошибки)
-8. [Best practices](#best-practices)
-9. [FAQ и вопросы для собеседования](#faq)
+1. [[#ACID]]
+2. [[#Управление транзакциями в JDBC]]
+3. [[#Уровни изоляции]]
+4. [[#Savepoints]]
+5. [[#Интеграция с Spring]]
+6. [[#Распределённые транзакции]]
+7. [[#Ошибки и диагностика]]
+8. [[#Best practices]]
+9. [[#Вопросы для собеседования]]
 
 ---
 
-## 1. Что такое транзакция? ACID <a name="acid"></a>
-- **Atomicity**: всё или ничего
-- **Consistency**: данные всегда валидны
-- **Isolation**: параллельные транзакции не мешают друг другу
-- **Durability**: изменения не теряются после commit
+## ACID
 
-## 2. Управление транзакциями в JDBC <a name="управление"></a>
-- По умолчанию: autocommit=true (каждый запрос — отдельная транзакция)
-- Для ручного управления:
-```java
-conn.setAutoCommit(false);
-// ... SQL ...
-conn.commit(); // или conn.rollback();
-```
-- Всегда используйте try-with-resources и finally для возврата соединения и восстановления autocommit
+- **Atomicity** — всё или ничего: если одна операция провалилась, откатывается вся группа
+- **Consistency** — данные всегда переходят из одного валидного состояния в другое
+- **Isolation** — параллельные транзакции не видят незафиксированных изменений друг друга
+- **Durability** — после `commit` данные сохранены даже при сбое системы
 
-## 3. Уровни изоляции транзакций <a name="изоляция"></a>
-- READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE
-- Пример:
-```java
-conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-```
-- Рекомендация: READ_COMMITTED — баланс между производительностью и согласованностью
+---
 
-## 4. Savepoints и вложенные транзакции <a name="savepoints"></a>
-- Savepoint позволяет откатить только часть транзакции
-```java
-Savepoint sp = conn.setSavepoint("sp1");
-// ...
-conn.rollback(sp);
-conn.commit();
-```
-- JDBC не поддерживает настоящие вложенные транзакции, но savepoints позволяют частичный откат
+## Управление транзакциями в JDBC
 
-## 5. Интеграция с Spring <a name="spring"></a>
-- Используйте @Transactional и JdbcTemplate
+> [!WARNING] По умолчанию `autocommit = true`: каждый SQL-запрос немедленно фиксируется. Для работы с транзакцией необходимо явно отключить autocommit.
+
 ```java
-@Transactional(isolation = Isolation.SERIALIZABLE)
-public void updateProfileAndOrder(Long userId, String name) {
-    jdbcTemplate.update("UPDATE users SET name = ? WHERE id = ?", name, userId);
-    jdbcTemplate.update("INSERT INTO orders (user_id) VALUES (?)", userId);
+try (Connection conn = dataSource.getConnection()) {
+    conn.setAutoCommit(false);                          // начало транзакции
+    try {
+        // SQL-операции
+        conn.prepareStatement("UPDATE accounts SET balance = balance - 100 WHERE id = 1")
+            .executeUpdate();
+        conn.prepareStatement("UPDATE accounts SET balance = balance + 100 WHERE id = 2")
+            .executeUpdate();
+        conn.commit();                                  // фиксация
+    } catch (SQLException e) {
+        conn.rollback();                                // откат при ошибке
+        throw e;
+    }
 }
 ```
-- Spring автоматически откатывает транзакцию при исключениях
 
-## 6. Распределённые транзакции (XA, Saga) <a name="распределённые"></a>
-- Для микросервисов используйте XA-транзакции или Saga-паттерн
-- Пример XA:
+> [!INFO] `try-with-resources` закрывает `Connection`, но не откатывает незавершённую транзакцию автоматически — это нужно сделать явно в `catch`. HikariCP откатит её при возврате в пул, но полагаться на это — плохая практика.
+
+---
+
+## Уровни изоляции
+
+| Уровень | Dirty Read | Non-Repeatable Read | Phantom Read |
+|---------|------------|----------------------|--------------|
+| `READ_UNCOMMITTED` | Да | Да | Да |
+| `READ_COMMITTED` | Нет | Да | Да |
+| `REPEATABLE_READ` | Нет | Нет | Да |
+| `SERIALIZABLE` | Нет | Нет | Нет |
+
 ```java
-import javax.transaction.xa.XAResource;
-XAResource xaResource = conn.getXAResource();
-// ...
+conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 ```
-- Saga: последовательность локальных транзакций с компенсацией
 
-## 7. Ошибки и диагностика <a name="ошибки"></a>
-- Типовые ошибки: deadlock, timeout, connection lost, inconsistent state
-- Диагностика: анализируйте SQLState, используйте логирование, тестируйте rollback
-- Пример:
+- **Dirty Read** — читаем незафиксированные данные другой транзакции
+- **Non-Repeatable Read** — два одинаковых `SELECT` в одной транзакции дают разный результат
+- **Phantom Read** — повторный запрос возвращает другое количество строк
+
+> [!INFO] `READ_COMMITTED` — рекомендуемый уровень для большинства OLTP-систем: баланс между согласованностью и производительностью. `SERIALIZABLE` — максимальная изоляция, но высокий риск deadlock и низкая пропускная способность.
+
+---
+
+## Savepoints
+
+Savepoint позволяет откатить только часть транзакции, не отменяя всё целиком.
+
+```java
+conn.setAutoCommit(false);
+
+Savepoint sp = conn.setSavepoint("checkpoint1");
+try {
+    conn.prepareStatement("INSERT INTO logs (msg) VALUES ('step1')").executeUpdate();
+    // рискованная операция
+    conn.prepareStatement("UPDATE critical_table SET x = 1").executeUpdate();
+    conn.commit();
+} catch (SQLException e) {
+    conn.rollback(sp);      // откат только до savepoint, не всей транзакции
+    conn.commit();          // зафиксировать то, что было до savepoint
+}
+```
+
+> [!INFO] JDBC не поддерживает настоящие вложенные транзакции. Savepoints — ближайший эквивалент для частичного отката.
+
+---
+
+## Интеграция с Spring
+
+Spring управляет транзакциями через `@Transactional`:
+
+```java
+@Transactional
+public void transfer(Long fromId, Long toId, BigDecimal amount) {
+    jdbcTemplate.update(
+        "UPDATE accounts SET balance = balance - ? WHERE id = ?", amount, fromId
+    );
+    jdbcTemplate.update(
+        "UPDATE accounts SET balance = balance + ? WHERE id = ?", amount, toId
+    );
+}
+```
+
+```java
+// Уровень изоляции через аннотацию
+@Transactional(isolation = Isolation.SERIALIZABLE)
+public void criticalOperation() { ... }
+```
+
+> [!WARNING] `@Transactional` работает только при вызове метода **через Spring-прокси** (то есть из другого бина). Вызов `this.method()` внутри того же класса обходит прокси — транзакция не откроется.
+
+> [!INFO] По умолчанию Spring откатывает транзакцию только при `RuntimeException` и `Error`. Для `checked Exception` нужно явно указать: `@Transactional(rollbackFor = Exception.class)`.
+
+---
+
+## Распределённые транзакции
+
+**XA-транзакции** — для координации нескольких ресурсов (несколько БД, JMS и БД):
+
+```java
+XADataSource xaDs = ...;
+XAConnection xaConn = xaDs.getXAConnection();
+XAResource xaResource = xaConn.getXAResource();
+// координируется через TransactionManager (Atomikos, Bitronix)
+```
+
+**Saga-паттерн** — для микросервисов: последовательность локальных транзакций с компенсирующими операциями при сбое. Нет двухфазного коммита — выше производительность, но сложнее логика компенсации.
+
+> [!INFO] XA-транзакции в микросервисной архитектуре не рекомендуются: высокая сложность и latency. Предпочтительнее Saga через Kafka-события или Orchestration (Temporal, Axon).
+
+---
+
+## Ошибки и диагностика
+
 ```java
 try {
     conn.setAutoCommit(false);
     // ...
     conn.commit();
 } catch (SQLException e) {
-    if (conn != null) conn.rollback();
+    try { conn.rollback(); } catch (SQLException re) { /* логировать */ }
+    logger.error("Transaction failed. SQLState: {}, Code: {}",
+        e.getSQLState(), e.getErrorCode(), e);
     throw e;
 }
 ```
 
-## 8. Best practices <a name="best-practices"></a>
-- Минимизируйте время выполнения транзакций
-- Всегда реализуйте обработку rollback
-- Используйте пул соединений для многопоточных приложений
-- Не смешивайте бизнес-логику и управление транзакциями
-- Логируйте ошибки и rollback
+Типовые проблемы:
+- **Deadlock** — SQLState `40001`, код MySQL `1213`. Решение: retry с backoff
+- **Timeout** — SQLState `08xxx`. Оптимизируйте запрос или увеличьте timeout
+- **Connection lost** — транзакция прервана. Требует rollback и повтора
 
-## 9. FAQ и вопросы для собеседования <a name="faq"></a>
-### Часто задаваемые вопросы
-- Как реализовать транзакцию в JDBC?
-- Как выбрать уровень изоляции?
-- Как откатить только часть транзакции?
-- Как интегрировать транзакции с Spring?
-- Как реализовать распределённую транзакцию?
-
-### Вопросы для собеседования
-1. Что такое ACID?
-2. Как работает commit/rollback в JDBC?
-3. Какой уровень изоляции выбрать для OLTP?
-4. Как реализовать savepoint?
-5. Как Spring управляет транзакциями?
-6. Как диагностировать deadlock?
+Подробнее: [[Ошибки и диагностика в JDBC]]
 
 ---
 
-**Рекомендуемые материалы:**
+## Best practices
+
+- Минимизируйте время выполнения транзакции — держите её как можно короче
+- Всегда реализуйте `rollback` в `catch`
+- Не смешивайте бизнес-логику и управление транзакциями в одном методе
+- Используйте пул соединений — [[Пула Соединений с JDBC]]
+- Логируйте откаты с `SQLState` и контекстом операции
+- Для deadlock реализуйте retry с экспоненциальным backoff
+
+---
+
+## Вопросы для собеседования
+
+1. Что такое ACID? Объясните каждый принцип.
+2. Что происходит при `autocommit = true`?
+3. Как реализовать транзакцию в чистом JDBC?
+4. Какой уровень изоляции выбрать для OLTP?
+5. Что такое Savepoint и когда его использовать?
+6. Как Spring управляет транзакциями? Подводные камни `@Transactional`.
+7. Чем Saga отличается от XA-транзакций?
+
+---
+
+**Связанные заметки:** [[Основы]] | [[Пула Соединений с JDBC]] | [[Ошибки и диагностика в JDBC]]
+
+**Материалы:**
 - [JDBC Transactions](https://docs.oracle.com/javase/tutorial/jdbc/basics/transactions.html)
 - [Spring Transaction Management](https://docs.spring.io/spring-framework/docs/current/reference/html/data-access.html#transaction)
 - [XA Transactions](https://docs.oracle.com/javase/8/docs/api/javax/transaction/xa/XAResource.html)

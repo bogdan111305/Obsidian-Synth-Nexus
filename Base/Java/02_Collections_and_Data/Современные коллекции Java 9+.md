@@ -442,20 +442,3 @@ Stream.of(1, 2, 3).mapToInt(Integer::intValue).sum(); // Медленнее
 4. **Какие проблемы могут возникнуть при использовании неизменяемых коллекций?**
 5. **Как тестировать код с неизменяемыми коллекциями?**
 
-## 10. Дополнительные ресурсы
-
-### Официальная документация
-- [Java 9 Collections Factory Methods](https://docs.oracle.com/javase/9/core/collections-factory-methods.htm)
-- [Java 10 Local Variable Type Inference](https://docs.oracle.com/javase/10/language/toc.htm)
-- [Java 11 Features](https://docs.oracle.com/en/java/javase/11/)
-
-### Книги
-- "Modern Java in Action" by Raoul-Gabriel Urma
-- "Effective Java" by Joshua Bloch (3rd Edition)
-- "Java 9 Modularity" by Sander Mak
-
-### Онлайн ресурсы
-- [Baeldung - Java 9 Collections](https://www.baeldung.com/java-9-collections-factory-methods)
-- [Oracle Blog - Immutable Collections](https://blogs.oracle.com/javamagazine/immutable-collections-in-java-9)
-- [Java Code Geeks - Java 9 Features](https://www.javacodegeeks.com/java-9-features.html)
-
