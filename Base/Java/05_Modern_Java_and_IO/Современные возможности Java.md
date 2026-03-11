@@ -1,7 +1,7 @@
 ---
 title: "Современные возможности Java — Records, Sealed, Pattern Matching"
 tags: [java, modern-java, records, sealed-classes, pattern-matching, java17, java21]
-updated: 2026-03-04
+updated: 2026-03-11
 ---
 
 # Современные возможности Java (ООП)
@@ -326,6 +326,179 @@ ScopedValue.where(CURRENT_USER, user).run(() -> {
 });
 // Вне scope: CURRENT_USER.isBound() == false
 ```
+
+---
+
+## Unnamed Patterns и Unnamed Variables (Java 22+)
+
+**Unnamed Pattern** (`_`) в `switch` и `instanceof` — игнорируем переменную без имени:
+
+```java
+// Java 22: Unnamed Pattern Variable (JEP 456)
+// _ вместо именованной переменной, если значение не нужно
+if (obj instanceof Point(var x, _)) {          // игнорируем y
+    System.out.println("x=" + x);
+}
+
+// В switch — unnamed pattern:
+switch (shape) {
+    case Circle(_, var r) when r > 0 -> Math.PI * r * r;  // center не нужен
+    case Circle(_, _)                -> 0;                  // ничего не нужно
+    case Rectangle(var w, var h)     -> w * h;
+}
+
+// Unnamed Variable в блоках кода (не только patterns):
+try {
+    riskyOperation();
+} catch (Exception _) {      // исключение поймано, но не используется
+    log("operation failed");
+}
+
+for (var _ : list) {         // итерируем N раз, элемент не нужен
+    counter++;
+}
+```
+
+> [!INFO] Зачем `_`?
+> До Java 22 нужно было придумывать имя (`ignored`, `unused`, `e`). Теперь компилятор явно знает "эта переменная намеренно игнорируется" — улучшает читаемость и позволяет JIT более агрессивно оптимизировать.
+
+---
+
+## Primitive Types in Patterns (Java 23, Preview)
+
+Java 23 вводит поддержку примитивных типов в pattern matching (JEP 455, preview):
+
+```java
+// До Java 23: примитивы нельзя использовать в switch pattern matching
+// Object value = 42;
+// case int i -> ... // ошибка компиляции
+
+// Java 23 Preview: примитивные типы в switch
+static String describe(Object obj) {
+    return switch (obj) {
+        case int i    when i < 0   -> "negative int: " + i;
+        case int i                 -> "positive int: " + i;
+        case long l                -> "long: " + l;
+        case float f               -> "float: " + f;
+        case double d              -> "double: " + d;
+        case String s              -> "string: " + s;
+        default                    -> "other";
+    };
+}
+
+// Также в instanceof:
+if (obj instanceof int i) {  // Java 23 Preview
+    System.out.println("int: " + i);
+}
+```
+
+> [!WARNING] Статус в Java 25
+> Primitive Types in Patterns был Preview в Java 23-24. В Java 25 (сентябрь 2025) ожидается финализация. Проверяй актуальный статус через [JEP Index](https://openjdk.org/jeps/).
+
+---
+
+## Records: Senior-уровень — что генерирует javac
+
+> [!INFO] Senior: понимание Records на уровне байт-кода
+> Records — не просто синтаксический сахар. Разберём что именно генерирует компилятор.
+
+```java
+// Исходник:
+public record Point(int x, int y) implements Comparable<Point> {
+    // Compact constructor (валидация без повторения полей)
+    public Point {
+        if (x < 0 || y < 0) throw new IllegalArgumentException("negative coords");
+        // this.x = x; this.y = y; — неявно добавляется компилятором в конец!
+    }
+
+    // Кастомный accessor (переопределяем x()):
+    @Override
+    public int x() { return Math.abs(x); }  // можно, если нужно
+
+    // Статические фабричные методы — можно добавлять
+    public static Point origin() { return new Point(0, 0); }
+
+    // Можно реализовывать интерфейсы
+    @Override
+    public int compareTo(Point other) { return Integer.compare(x, other.x); }
+}
+```
+
+**Что генерирует javac (байт-код эквивалент):**
+
+```java
+// Скомпилированный эквивалент (упрощённо):
+public final class Point extends java.lang.Record implements Comparable<Point> {
+    private final int x;  // private final — всегда!
+    private final int y;
+
+    // Canonical constructor:
+    public Point(int x, int y) {
+        // super() — неявно вызывает Record()
+        if (x < 0 || y < 0) throw new IllegalArgumentException("negative coords");
+        this.x = x;  // неявно добавлено из compact constructor
+        this.y = y;
+    }
+
+    // Accessors (НЕ getX(), а именно x() — это контракт Record!):
+    public int x() { return Math.abs(x); }  // переопределён
+    public int y() { return this.y; }       // сгенерирован
+
+    // equals: использует invokedynamic + RecordComponents (не через reflection!)
+    // Это делает equals Records значительно быстрее рефлексивного equals
+    @Override public boolean equals(Object o) { /* invokedynamic */ }
+
+    // hashCode: аналогично через invokedynamic + bootstrap method
+    @Override public int hashCode() { /* invokedynamic */ }
+
+    // toString: "Point[x=1, y=2]" — через invokedynamic
+    @Override public String toString() { /* invokedynamic */ }
+}
+```
+
+**Senior-нюансы Records:**
+
+```java
+// 1. Records и сериализация — Records реализуют Serializable корректно!
+//    При десериализации ВСЕГДА вызывается canonical constructor
+//    (в отличие от обычных классов где конструктор пропускается)
+public record Config(String host, int port) implements Serializable {}
+// Это БЕЗОПАСНО: валидация в constructor всегда выполняется
+
+// 2. Records с Generic:
+public record Pair<A, B>(A first, B second) {}
+Pair<String, Integer> p = new Pair<>("hello", 42);
+// Type erasure работает как обычно
+
+// 3. Records НЕ могут extends другой класс (кроме Record)
+// Records МОГУТ implements любые интерфейсы
+
+// 4. Records и Pattern Matching (Java 21):
+static void process(Object obj) {
+    if (obj instanceof Point(int x, int y)) {
+        // x и y — напрямую без obj.x()
+    }
+}
+
+// 5. Records как DTO в Spring (JSON через Jackson):
+// Jackson 2.12+ автоматически обнаруживает Record constructor
+// Не нужны @JsonProperty — имена компонентов = имена JSON полей
+@GetMapping("/point")
+public Point getPoint() {
+    return new Point(1, 2);  // → {"x":1,"y":2}
+}
+```
+
+> [!WARNING] Ловушка: Records не полностью иммутабельны
+> Если компонент — мутабельный объект, Record не защищает от изменений:
+> ```java
+> record Wrapper(List<String> items) {}
+> var w = new Wrapper(new ArrayList<>(List.of("a")));
+> w.items().add("b"); // РАБОТАЕТ! Поле final, но список мутабельный
+> // Fix: public record Wrapper(List<String> items) {
+> //     public Wrapper { items = List.copyOf(items); }  // defensive copy
+> // }
+> ```
 
 ---
 

@@ -111,37 +111,24 @@ public class VolatileExample {
 
 ## 3. JVM-реализация `volatile`
 
-`volatile` работает в рамках **Java Memory Model (JMM)**, которая определяет правила взаимодействия потоков с памятью.
+> [!INFO] Теоретическая основа — в JMM
+> Полный разбор барьеров памяти, happens-before правил, DCL и VarHandle ordering modes — в [[Модель памяти Java (JMM) и барьеры памяти]]. Здесь — только практический минимум.
 
-- **Барьеры памяти**:
-    - **Store barrier** (при записи): Все предыдущие записи завершаются до записи в `volatile` переменную.
-    - **Load barrier** (при чтении): Поток обновляет локальный кэш перед чтением `volatile` переменной.
-- **Байт-код**:
-    - Чтение/запись `volatile` использует инструкции `getfield`/`putfield` с флагом `ACC_VOLATILE`.
-    - JVM добавляет барьеры памяти (например, `lock addl $0x0, (%esp)` на x86).
+`volatile` в байт-коде помечает поле флагом `ACC_VOLATILE`. JIT вставляет соответствующие барьеры:
 
-**Пример байт-кода**:
+```
+// Запись: flag = true
+putfield VolatileExample.flag:Z   // ACC_VOLATILE
+// JIT на x86: LOCK XCHG (или implicit — store не может быть reordered past load)
+// JIT на ARM:  STLR (store-release)
 
-```java
-class VolatileExample {
-    volatile boolean flag;
-    void writer() {
-        flag = true;
-    }
-}
+// Чтение: boolean f = flag
+getfield VolatileExample.flag:Z   // ACC_VOLATILE
+// JIT на x86: обычный load (x86 TSO делает reads уже acquire)
+// JIT на ARM:  LDAR (load-acquire)
 ```
 
-**Байт-код**:
-
-```java
-putfield VolatileExample.flag:Z // Запись с ACC_VOLATILE
-// JVM добавляет store barrier
-```
-
-**JMM Happens-Before**:
-
-- Запись в `volatile` переменную **happens-before** последующее чтение этой переменной.
-- Это гарантирует видимость всех операций до записи `volatile` для всех операций после чтения.
+**Ключевой факт**: на x86 `volatile write` дороже `volatile read` (StoreLoad fence). На ARM обе операции одинаково дороги.
 
 ## 4. Практическое применение
 
@@ -178,28 +165,29 @@ public class ShutdownExample {
 
 ### 4.2. Пример: Double-checked locking
 
-```java
-public class Singleton {
-    private static volatile Singleton instance;
+> [!INFO] Подробный разбор с байт-кодом и тремя вариантами реализации — в [[Модель памяти Java (JMM) и барьеры памяти#JMM Double-Checked Locking — разбор по байт-коду]]
 
-    private Singleton() {}
+```java
+// Корректный DCL: volatile обязателен!
+public class Singleton {
+    private static volatile Singleton instance; // volatile!
 
     public static Singleton getInstance() {
-        if (instance == null) {
+        if (instance == null) {              // 1. fast path без синхронизации
             synchronized (Singleton.class) {
-                if (instance == null) {
+                if (instance == null) {      // 2. slow path с синхронизацией
                     instance = new Singleton();
+                    // volatile write = StoreStore+StoreLoad барьер
+                    // конструктор ВСЕГДА завершён ДО этого барьера
                 }
             }
         }
         return instance;
     }
 }
+// BEST: Initialization-on-demand holder (без volatile, без synchronized в fast path):
+// private static class Holder { static final Singleton INSTANCE = new Singleton(); }
 ```
-
-**Почему нужен `volatile`**?
-
-- Без `volatile` переупорядочивание операций в `instance = new Singleton()` может привести к тому, что другой поток увидит частично инициализированный объект.
 
 ### 4.3. Применение в реальных сценариях
 
@@ -275,7 +263,75 @@ public class AtomicCounter {
 - Полная атомарность для операций вроде `incrementAndGet`.
 - Встроенная видимость, как у `volatile`.
 
-### 5.3. Виртуальные потоки (Java 21)
+### 5.3. Отложенная видимость: lazySet / setOpaque / setRelease
+
+> [!INFO] Senior-паттерн: когда полный volatile fence избыточен
+> Иногда нужна видимость "в итоге" (eventually visible), а не немедленная. Для этого существуют ослабленные операции записи — быстрее `volatile`, но со слабыми гарантиями.
+
+```java
+import java.util.concurrent.atomic.AtomicReference;
+import java.lang.invoke.VarHandle;
+
+// AtomicReference.lazySet (устарело в Java 9, но ещё используется)
+// = VarHandle.setRelease — StoreStore барьер (NO StoreLoad!)
+// Гарантирует: предыдущие записи видны ДО этой, но другой поток МОЖЕТ видеть
+// новое значение не сразу (нет обязательной публикации cross-thread).
+// Используется для: обнуления ссылок в пулах, очереди SPSC
+
+AtomicReference<Object> ref = new AtomicReference<>();
+ref.lazySet(null); // быстрее ref.set(null) для cleanup
+
+// VarHandle.setOpaque — атомарно, coherent, без HB и ordering
+// (одно поле видно последовательно — нет stale reads как у plain)
+// Использование: progress indicators, счётчики для observability (не для синхронизации)
+
+// Практический пример: очистка ссылки в thread pool worker
+class Worker {
+    private static final VarHandle TASK;
+    static { /* lookup */ }
+
+    volatile Object task;
+
+    void complete() {
+        TASK.setRelease(this, null); // быстрее volatile set, гарантирует видимость предыдущих writes
+    }
+}
+```
+
+**Сравнение производительности (нс/op, приблизительно, x86):**
+
+| Операция | Latency | Throughput |
+|----------|---------|------------|
+| Plain `field = value` | ~1 нс | ~1000 мопс |
+| `setOpaque` | ~2 нс | ~800 мопс |
+| `setRelease` / `lazySet` | ~3 нс | ~600 мопс |
+| `volatile` write | ~10–30 нс | ~50–200 мопс |
+| `compareAndSet` | ~15–40 нс | ~30–80 мопс |
+
+### 5.4. False Sharing и volatile
+
+> [!WARNING] volatile НЕ защищает от False Sharing — это разные проблемы
+> `volatile` решает видимость. False Sharing — это производительность кэша. Два volatile-поля в одной кэш-линии работают корректно, но МЕДЛЕННО.
+
+```java
+// BAD: оба поля в одной кэш-линии → каждый volatile write инвалидирует
+// кэш другого ядра, хотя данные не пересекаются
+class SharedState {
+    volatile long reads  = 0; // обновляет Thread-1
+    volatile long writes = 0; // обновляет Thread-2 (та же кэш-линия!)
+}
+
+// FIX: @Contended или padding
+class PaddedState {
+    @jdk.internal.vm.annotation.Contended volatile long reads  = 0;
+    @jdk.internal.vm.annotation.Contended volatile long writes = 0;
+    // Требует -XX:-RestrictContended для пользовательских классов
+}
+```
+
+Подробнее: [[Модель памяти Java (JMM) и барьеры памяти#False Sharing и @Contended]]
+
+### 5.5. Виртуальные потоки (Java 21)
 
 `volatile` работает так же для виртуальных потоков, как и для платформенных. Барьеры памяти JMM применяются одинаково. Однако следует помнить: `volatile` не защищает от **пинирования** — для избежания пинирования при синхронизации используйте `ReentrantLock` вместо `synchronized`.
 
@@ -316,56 +372,36 @@ public class AtomicCounter {
     - Используйте `volatile` для флагов и простых операций.
     - Для сложных операций выбирайте `AtomicInteger` или `VarHandle`.
 
-## 8. Плюсы и минусы `volatile`
+## 8. Decision Matrix: что выбрать?
 
-|Плюсы|Минусы|
-|---|---|
-|✅ Гарантирует видимость изменений|❌ Не обеспечивает атомарность сложных операций|
-|✅ Запрещает переупорядочивание|❌ Накладные расходы на барьеры памяти|
-|✅ Простота для флагов и состояний|❌ Не заменяет `synchronized` или `Lock`|
+| Ситуация | Инструмент | Почему |
+|----------|-----------|--------|
+| Флаг остановки потока | `volatile boolean` | Только visibility, нет contention |
+| Счётчик с одним писателем | `volatile long` | Один writer = нет race condition |
+| Счётчик с несколькими писателями | `AtomicLong` / `LongAdder` | CAS для атомарных инкрементов |
+| Счётчик с высоким contention | `LongAdder` | Cell striping снижает contention |
+| Публикация объекта | `volatile` ref или `final` поле | Happens-before для безопасной публикации |
+| Очистка ссылки в пуле | `VarHandle.setRelease()` | Дешевле volatile, достаточно для cleanup |
+| Observability счётчик | `VarHandle.setOpaque()` | Без overhead барьеров |
+| Синхронизация нескольких полей | `synchronized` / `Lock` | volatile не гарантирует атомарность составных операций |
 
 ## 9. Лучшие практики
 
-1. **Используйте `volatile` для флагов**:
-    
-    ```java
-    private volatile boolean running = true;
-    ```
-    
-2. **Для сложных операций применяйте `Atomic` классы**:
-    
-    ```java
-    AtomicInteger count = new AtomicInteger();
-    count.incrementAndGet();
-    ```
-    
-3. **Избегайте составных операций с `volatile`**:
-    - Вместо `volatile count++` используйте `AtomicInteger`.
-4. **Используйте `VarHandle` для гибкости**:
-    
-    ```java
-    VarHandle COUNTER;
-    COUNTER.getAndAdd(this, 1);
-    ```
-    
-5. **Тестируйте многопоточность**:
-    
-    ```java
-    @Test
-    void testVolatile() {
-        VolatileExample example = new VolatileExample();
-        Thread writer = new Thread(example::writer);
-        Thread reader = new Thread(example::reader);
-        writer.start();
-        reader.start();
-        writer.join();
-        assertTrue(example.flag); // Видимость гарантирована
-    }
-    ```
-    
-6. **Минимизируйте барьеры памяти**:
-    - Ограничивайте `volatile` переменные для часто читаемых данных.
+1. **Правило одного писателя**: `volatile` безопасен когда запись делает только один поток, читать могут многие.
+2. **volatile ≠ synchronized**: для инвариантов между несколькими полями нужна синхронизация.
+3. **Предпочитай `VarHandle` вместо `Unsafe`**: для lock-free структур используй `VarHandle` — безопасно, поддерживается JDK.
+4. **Тест на видимость сложен**: используй `jcstress` (Java Concurrency Stress) для correctness-тестирования JMM-зависимого кода.
 
-## 10. Заключение
+```java
+// jcstress тест на видимость volatile:
+@JCStressTest
+@Outcome(id = "0, 1", expect = FORBIDDEN, desc = "Флаг без данных — нарушение JMM!")
+@State
+public class VolatileVisibilityTest {
+    int data;
+    volatile boolean flag;
 
-Атомарность операций и `volatile` в Java — важные инструменты для многопоточного программирования. Атомарные операции (чтение/запись примитивов и ссылок) выполняются без прерываний, но составные операции требуют дополнительных механизмов. `volatile` обеспечивает видимость и запрет переупорядочивания через барьеры памяти, но не решает проблему атомарности сложных операций. Современные альтернативы (`VarHandle`, `Atomic` классы) расширяют возможности. Понимание Java Memory Model, барьеров памяти и следование лучшим практикам позволяют создавать надёжные и производительные многопоточные приложения.
+    @Actor void writer() { data = 1; flag = true; }
+    @Actor void reader(II_Result r) { r.r1 = flag ? 1 : 0; r.r2 = data; }
+}
+```

@@ -1,7 +1,7 @@
 ---
 title: "Java — Исключения (Exception Handling)"
 tags: [java, exceptions, try-catch, checked-unchecked, error-handling]
-updated: 2026-03-04
+updated: 2026-03-11
 ---
 
 # Исключения в Java (Exception Handling)
@@ -428,3 +428,261 @@ public class ThreadExceptionExample {
 - [[ThreadPool, Future, Callable, Executors, CompletableFuture]] — ExecutionException, InterruptedException
 - [[Корпоративная социальная сеть - микросервисная архитектура, выбор языка и идеи для вовлечённости|Корпоративная социальная сеть]] — обработка исключений в REST API микросервисов
 - **Рекомендация**: Используйте профилировщики (например, VisualVM) для анализа влияния исключений на производительность.
+
+---
+
+## 13. Senior Insights
+
+### 13.1. try-with-resources: что генерирует javac
+
+Компилятор разворачивает `try (Resource r = ...)` в сложный `try-finally` с обработкой подавленных исключений. Это важно понимать при дебаге.
+
+**Исходный код:**
+```java
+try (InputStream in = new FileInputStream("a.txt");
+     OutputStream out = new FileOutputStream("b.txt")) {
+    transfer(in, out);
+}
+```
+
+**Что генерирует javac (псевдо-код):**
+```java
+InputStream in = new FileInputStream("a.txt");
+Throwable $primaryExc = null;          // synthetic variable
+try {
+    OutputStream out = new FileOutputStream("b.txt");
+    Throwable $primaryExc2 = null;
+    try {
+        transfer(in, out);
+    } catch (Throwable t) {
+        $primaryExc2 = t;              // запоминаем первичное исключение
+        throw t;
+    } finally {
+        if (out != null) {
+            if ($primaryExc2 != null) {
+                try { out.close(); }
+                catch (Throwable t) {
+                    $primaryExc2.addSuppressed(t); // не теряем исключение close()
+                }
+            } else {
+                out.close();           // если нет первичного — бросаем из close()
+            }
+        }
+    }
+} catch (Throwable t) {
+    $primaryExc = t;
+    throw t;
+} finally {
+    // то же самое для in
+}
+```
+
+**Порядок закрытия:** LIFO (last opened — first closed). `out` закрывается первым, потом `in`.
+
+### 13.2. Suppressed Exceptions
+
+Suppressed исключения возникают когда `close()` бросает исключение во время разворачивания стека.
+
+```java
+class BrokenResource implements AutoCloseable {
+    @Override
+    public void close() throws Exception {
+        throw new Exception("close() failed");
+    }
+}
+
+try (BrokenResource r = new BrokenResource()) {
+    throw new RuntimeException("primary"); // первичное исключение
+}
+// RuntimeException("primary") будет выброшено
+// Exception("close() failed") будет подавлено и доступно через:
+// e.getSuppressed()[0]
+```
+
+**Получение подавленных исключений:**
+```java
+try {
+    // ...
+} catch (RuntimeException e) {
+    System.out.println("Primary: " + e.getMessage());
+    for (Throwable suppressed : e.getSuppressed()) {
+        System.out.println("Suppressed: " + suppressed.getMessage());
+    }
+}
+```
+
+> [!WARNING] Ловушка: ручной finally скрывает исключение close()
+> ```java
+> Resource r = new Resource();
+> try {
+>     doWork();
+> } finally {
+>     r.close(); // если close() бросает — исключение из doWork() ТЕРЯЕТСЯ!
+> }
+> // Используй try-with-resources — там addSuppressed() сохранит оба
+> ```
+
+### 13.3. Exception chaining — внутренняя механика
+
+**`initCause` vs конструктор:**
+```java
+// Через конструктор (предпочтительно):
+throw new ServiceException("DB error", cause);  // super(message, cause)
+
+// Через initCause (только если нет конструктора с cause):
+ServiceException ex = new ServiceException("DB error");
+ex.initCause(cause);  // можно вызвать ТОЛЬКО ОДИН РАЗ, иначе IllegalStateException
+throw ex;
+```
+
+**Внутри Throwable:**
+```java
+// Throwable хранит:
+private Throwable cause = this;  // this = "cause not set"
+// После initCause(t): cause = t
+// После initCause(null): cause = null (явный "нет причины")
+
+// getCause() возвращает null если cause == this (не было вызова)
+```
+
+**Цепочка при перебросе:**
+```java
+// ПЛОХО — теряем оригинальный стек:
+try {
+    db.query();
+} catch (SQLException e) {
+    throw new ServiceException("DB failed"); // ← нет cause!
+}
+
+// ХОРОШО — сохраняем причину и добавляем контекст:
+} catch (SQLException e) {
+    throw new ServiceException("DB failed for user=" + userId, e);
+}
+
+// ХОРОШО — перебросить с обёрткой (для API, скрывающих детали реализации):
+} catch (SQLException e) {
+    throw new DataAccessException("Repository layer failure", e);
+}
+```
+
+### 13.4. Производительность: fillInStackTrace()
+
+Создание исключения — это не просто `new Object()`. Дорогой шаг — `fillInStackTrace()`:
+
+```java
+// Вызывается в конструкторе Throwable:
+public Throwable() {
+    fillInStackTrace(); // ← нативный метод, обходит весь стек вызовов
+}
+```
+
+**Реальные числа (JMH, warm JVM):**
+| Операция | Время |
+|---|---|
+| `new Object()` | ~5 нс |
+| `new Exception()` (стек 5 фреймов) | ~500 нс |
+| `new Exception()` (стек 50 фреймов) | ~5000 нс |
+| `throw/catch` уже созданного | ~50 нс |
+| Первый `throw` (интерпретатор) | ~100 мкс |
+
+**Оптимизация JVM — OmitStackTraceInFastThrow:**
+```
+JIT оптимизирует часто бросаемые исключения:
+NPE/AIOOB/ClassCast/StackOverflow → JVM начинает бросать
+singleton-исключение БЕЗ stack trace (нулевой overhead)
+
+-XX:-OmitStackTraceInFastThrow — отключить оптимизацию (для отладки)
+```
+
+```java
+// Обнаруживаешь по пустому стеку в логах:
+java.lang.NullPointerException
+    (no stack trace — это JVM оптимизация!)
+
+// → добавь -XX:-OmitStackTraceInFastThrow при воспроизведении
+```
+
+**Трюк — переопределить fillInStackTrace для cheap exceptions:**
+```java
+// Для исключений, используемых как control flow (редко оправдано):
+public class FastException extends RuntimeException {
+    public FastException(String message) {
+        super(message, null, true, false); // 4-й параметр: writableStackTrace=false
+    }
+
+    @Override
+    public synchronized Throwable fillInStackTrace() {
+        return this; // no-op
+    }
+}
+// Производительность: ~5 нс вместо ~500 нс
+// Применение: Vavr's ControlThrowable, Scala BreakControl
+```
+
+### 13.5. Custom Exceptions в микросервисах
+
+**Иерархия для API:**
+```java
+// Базовое для доменных ошибок:
+public abstract class DomainException extends RuntimeException {
+    private final ErrorCode code;
+    private final Map<String, Object> context;
+
+    protected DomainException(ErrorCode code, String message, Map<String, Object> ctx) {
+        super(message);
+        this.code = code;
+        this.context = Map.copyOf(ctx); // иммутабельность
+    }
+
+    protected DomainException(ErrorCode code, String message, Throwable cause) {
+        super(message, cause);
+        this.code = code;
+        this.context = Map.of();
+    }
+}
+
+// Конкретные типы:
+public class UserNotFoundException extends DomainException {
+    public UserNotFoundException(long userId) {
+        super(ErrorCode.USER_NOT_FOUND,
+              "User not found: " + userId,
+              Map.of("userId", userId));
+    }
+}
+
+public class InsufficientBalanceException extends DomainException {
+    public InsufficientBalanceException(BigDecimal required, BigDecimal available) {
+        super(ErrorCode.INSUFFICIENT_BALANCE,
+              "Required: " + required + ", available: " + available,
+              Map.of("required", required, "available", available));
+    }
+}
+```
+
+**Перехват в Spring REST:**
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(DomainException.class)
+    public ResponseEntity<ErrorResponse> handleDomain(DomainException ex) {
+        return ResponseEntity
+            .status(ex.getCode().getHttpStatus())
+            .body(new ErrorResponse(ex.getCode(), ex.getMessage(), ex.getContext()));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
+        log.error("Unexpected error", ex); // ← логируем с полным стеком
+        return ResponseEntity.internalServerError()
+            .body(new ErrorResponse(ErrorCode.INTERNAL_ERROR, "Internal server error", Map.of()));
+    }
+}
+```
+
+> [!INFO] Правила для Senior
+> 1. **Checked exceptions** — только на границах системы (I/O, внешние API), где вызывающий должен обработать
+> 2. **Unchecked** — для нарушения контракта (неверные данные, нарушение инварианта)
+> 3. **Всегда добавляй cause** при перебросе — потеря стека = часы отладки
+> 4. **Не лови Throwable** — `Error` сигнализирует о неисправимом состоянии JVM
+> 5. **InterruptedException** — всегда восстанавливай флаг: `Thread.currentThread().interrupt()`

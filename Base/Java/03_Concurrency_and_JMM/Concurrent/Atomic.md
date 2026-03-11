@@ -1,3 +1,9 @@
+---
+title: "Atomic (java.util.concurrent.atomic)"
+tags: [java, concurrency, atomic, cas, varhandle, longadder, lock-free]
+updated: 2026-03-11
+---
+
 # Atomic (java.util.concurrent.atomic)
 
 > [!QUOTE] Суть
@@ -392,3 +398,179 @@ public class LockFreeQueue<T> {
 ## 16. Заключение
 
 Пакет `java.util.concurrent.atomic` предоставляет мощные инструменты для безблокировочных операций в многопоточных приложениях. Основанные на CAS, атомарные классы (`AtomicInteger`, `AtomicReference`, `LongAdder`) обеспечивают высокую производительность и отсутствие deadlock. Однако ABA-проблема и конкуренция требуют осторожности. Современные возможности, такие как `VarHandle` и виртуальные потоки (Java 21+), расширяют их применимость. Следование лучшим практикам и тестирование позволяют создавать надёжные и эффективные приложения.
+
+---
+
+## 17. Senior Insights
+
+### 17.1. LongAdder vs AtomicLong: Striped64 под капотом
+
+`LongAdder` быстрее `AtomicLong` при высокой конкуренции за счёт **распределения по ячейкам (cells)**. Реализован через `Striped64`:
+
+```
+Striped64 layout:
+  base (volatile long)    — основное значение, если нет конкуренции
+  cells (Cell[])          — массив @Contended ячеек
+
+  При конкуренции: каждый поток пишет в СВОЮ ячейку (по threadId % cells.length)
+  sum() = base + cells[0] + cells[1] + ... + cells[n]
+
+Cell:
+  @Contended               // отдельная cache line (64 байт padding)
+  volatile long value;     // своё значение для каждого потока
+```
+
+```java
+// LongAdder рост массива ячеек:
+// 0 потоков конкурирует → base (нет cells)
+// Первая конкуренция → cells[1]
+// Ещё конкуренция → cells[2], cells[4], cells[8]... до CPU_COUNT
+
+// sum() НЕ атомарный — снапшот для метрик, не для синхронизации:
+LongAdder adder = new LongAdder();
+// thread1: adder.increment(); thread2: adder.increment();
+long snapshot = adder.sum();  // может пропустить in-flight increments
+// Для точных счётчиков используй sumThenReset() с внешней синхронизацией
+```
+
+**Производительность (JMH, 32 потока):**
+| Операция | ~ns/op |
+|---|---|
+| `AtomicLong.incrementAndGet()` | ~200 нс (все потоки — одна ячейка) |
+| `LongAdder.increment()` | ~15 нс (каждый поток — своя ячейка) |
+| `volatile long++` | не атомарна! — нельзя использовать |
+
+> [!WARNING] Ловушка: LongAdder.sum() не атомарен
+> `sum()` суммирует base + все cells **без блокировки** — значение является приближённым в момент чтения. Для точного финального значения (после завершения всех операций) — `sum()` корректен. Для rolling-window метрик с конкурентным чтением — нужна внешняя синхронизация или `AtomicLong`.
+
+### 17.2. AtomicReference для иммутабельных state machines
+
+`AtomicReference` + иммутабельные записи = lock-free state transitions без ABA проблем:
+
+```java
+// Иммутабельное состояние сервиса (record Java 16+):
+record ServiceState(int connections, boolean healthy, Instant lastCheck) {}
+
+class ServiceMonitor {
+    private final AtomicReference<ServiceState> state = new AtomicReference<>(
+        new ServiceState(0, true, Instant.now())
+    );
+
+    // CAS loop — потокобезопасное обновление без блокировки:
+    public void recordConnection() {
+        ServiceState current, next;
+        do {
+            current = state.get();
+            next = new ServiceState(
+                current.connections() + 1,
+                current.healthy(),
+                current.lastCheck()
+            );
+        } while (!state.compareAndSet(current, next));
+        // Если другой поток изменил state между get() и CAS — повторяем
+    }
+
+    // updateAndGet — более читаемый способ (Java 8+):
+    public void markUnhealthy() {
+        state.updateAndGet(s ->
+            new ServiceState(s.connections(), false, Instant.now())
+        );
+        // updateAndGet реализован через CAS loop внутри
+    }
+
+    // accumulateAndGet для условных обновлений:
+    public void decrementConnections() {
+        state.accumulateAndGet(null, (current, ignored) ->
+            new ServiceState(
+                Math.max(0, current.connections() - 1),
+                current.healthy(),
+                current.lastCheck()
+            )
+        );
+    }
+}
+```
+
+**Почему это лучше synchronized:**
+- Нет блокировки → нет риска deadlock и thread starvation
+- Нет lock inflation overhead
+- Корректно при JIT инлайнинге (нет монитора)
+- ABA не страшна — record equality по значению, не по ссылке
+
+### 17.3. VarHandle — полный API и ordering modes
+
+`VarHandle` (Java 9+) — замена `Unsafe`, предоставляет все режимы доступа к памяти:
+
+```java
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+
+class Counter {
+    private volatile int value = 0;
+
+    // Статическое поле VarHandle (кэшируется — создание дорогое):
+    private static final VarHandle VALUE;
+    static {
+        try {
+            VALUE = MethodHandles.lookup()
+                .findVarHandle(Counter.class, "value", int.class);
+        } catch (ReflectiveOperationException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
+    // Режимы доступа (в порядке возрастания силы гарантий):
+    void demo() {
+        // 1. Plain — нет гарантий порядка (как обычная переменная):
+        int plain = (int) VALUE.get(this);          // обычное чтение
+        VALUE.set(this, 42);                        // обычная запись
+
+        // 2. Opaque — атомарность, но нет happens-before:
+        int opaque = (int) VALUE.getOpaque(this);   // atomic read (no fence)
+        VALUE.setOpaque(this, 42);                  // atomic write (no fence)
+
+        // 3. Acquire/Release — однонаправленные барьеры:
+        int acq = (int) VALUE.getAcquire(this);     // LoadLoad + LoadStore barrier
+        VALUE.setRelease(this, 42);                 // StoreStore + LoadStore barrier
+
+        // 4. Volatile — полный барьер (как volatile в Java):
+        int vol = (int) VALUE.getVolatile(this);    // полный fence
+        VALUE.setVolatile(this, 42);                // полный fence
+
+        // CAS операции:
+        boolean ok = VALUE.compareAndSet(this, 0, 1);         // сильный CAS
+        int witness = (int) VALUE.compareAndExchange(this, 0, 1); // возвращает witnessed
+        boolean weak = VALUE.weakCompareAndSetRelease(this, 0, 1); // слабый CAS
+    }
+}
+```
+
+**Паттерн: lock-free published reference (Acquire-Release):**
+```java
+// Producer:
+VALUE.setRelease(this, newValue); // StoreStore barrier — все предшествующие записи видны
+
+// Consumer:
+int seen = (int) VALUE.getAcquire(this); // LoadLoad barrier — все последующие чтения корректны
+// Гарантия: если getAcquire видит значение после setRelease,
+// то все записи producer'а до setRelease видны consumer'у после getAcquire.
+// Это дешевле volatile (~полный fence) на x86, и ЗНАЧИТЕЛЬНО дешевле на ARM.
+```
+
+### 17.4. Матрица выбора
+
+| Сценарий | Рекомендация |
+|---|---|
+| Простой счётчик, низкая конкуренция | `AtomicInteger` / `AtomicLong` |
+| Счётчик, высокая конкуренция | `LongAdder` |
+| Максимум/минимум по нескольким потокам | `LongAccumulator(Math::max, 0)` |
+| Атомарный swap ссылки | `AtomicReference.compareAndSet()` |
+| Иммутабельный state machine | `AtomicReference<Record>` + `updateAndGet()` |
+| ABA-чувствительная структура (stack/queue) | `AtomicStampedReference` |
+| Кастомный lock-free алгоритм | `VarHandle` с нужным ordering mode |
+| Несколько полей атомарно | `synchronized` или `Lock` |
+
+> [!INFO] Связано
+> - [[CAS и Unsafe]] — compareAndExchange, weakCompareAndSet, x86 vs ARM
+> - [[Модель памяти Java (JMM) и барьеры памяти]] — Acquire/Release vs Volatile ordering
+> - [[Lock]] — AQS использует `VarHandle.compareAndSet` для state

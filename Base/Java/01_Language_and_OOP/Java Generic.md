@@ -1,7 +1,7 @@
 ---
 title: "Java Generics — Дженерики"
 tags: [java, generics, wildcards, type-erasure, pecs]
-updated: 2026-03-04
+updated: 2026-03-11
 ---
 
 # Java Generics (Дженерики)
@@ -461,6 +461,107 @@ if (obj instanceof List<?> list) {
 | `catch (T e)` | Generic exception | Ловить конкретный тип |
 | `static T field` | Static не может быть generic | Убрать generic из статического контекста |
 | `List<int>` | Примитивы не поддерживаются | `List<Integer>` (autoboxing) |
+
+---
+
+## Wildcard Capture (Захват подстановочного типа)
+
+> [!INFO] Senior: почему `List<?>` не позволяет `list.set(0, list.get(0))` — и как это обойти
+> Компилятор создаёт **свежую переменную типа** (captured type) при работе с `List<?>`. Проблема: компилятор не может доказать, что элемент из `get(0)` совместим для `set(0, ...)` — оба возвращают `capture#1 of ?`, но это **разные** свежие переменные.
+
+```java
+// Задача: развернуть список
+void swap(List<?> list, int i, int j) {
+    // list.set(i, list.get(j)); // ОШИБКА КОМПИЛЯЦИИ!
+    // Компилятор видит: set(int, capture#1) ← get возвращает capture#2
+    // capture#1 ≠ capture#2 → несовместимые типы
+
+    swapHelper(list, i, j); // решение: helper-метод с T
+}
+
+// Wildcard Capture Helper: компилятор "захватывает" ? как T
+private <T> void swapHelper(List<T> list, int i, int j) {
+    T temp = list.get(i);
+    list.set(i, list.get(j));
+    list.set(j, temp);
+    // Теперь T - одна переменная типа, все операции совместимы
+}
+
+// Аналогичный паттерн в JDK Collections.reverse():
+public static void reverse(List<?> list) {
+    // Вызывает приватный <T> метод для захвата типа
+    int size = list.size();
+    ListIterator it = list.listIterator(size);
+    for (ListIterator fwd = list.listIterator(); fwd.hasNext(); )
+        swap(list, fwd.nextIndex(), fwd.previousIndex());
+}
+```
+
+**Правило**: когда нужно прочитать и записать элементы `List<?>` в один и тот же список — используй private generic helper. Этот паттерн встречается в `Collections`, `Arrays`, `Stream` операциях.
+
+---
+
+## Super Type Tokens — как обойти Type Erasure в Runtime
+
+> [!INFO] Senior: как Jackson/Gson/Guava знают `List<String>` vs `List<Integer>` если type erasure стирает всё?
+> Трюк: **anonymous class** сохраняет generic-параметр суперкласса в байт-коде через `Class.getGenericSuperclass()`. Это **единственный** легальный способ сохранить generic-тип в runtime.
+
+```java
+// Паттерн Super Type Token (Neal Gafter, 2006):
+abstract class TypeReference<T> {
+    private final Type type;
+
+    protected TypeReference() {
+        // getGenericSuperclass() возвращает ParameterizedType для anonymous subclass
+        // Байт-код анонимного класса хранит: "extends TypeReference<List<String>>"
+        Type superclass = getClass().getGenericSuperclass();
+        // superclass = TypeReference<List<String>> (ParameterizedType)
+        this.type = ((ParameterizedType) superclass).getActualTypeArguments()[0];
+        // type = java.util.List<java.lang.String> ← ПОЛНЫЙ тип сохранён!
+    }
+
+    public Type getType() { return type; }
+}
+
+// Использование:
+TypeReference<List<String>> ref = new TypeReference<List<String>>() {}; // {} - анонимный подкласс!
+Type type = ref.getType();
+System.out.println(type); // java.util.List<java.lang.String>
+
+// Как использует Jackson:
+ObjectMapper mapper = new ObjectMapper();
+List<String> list = mapper.readValue(json,
+    new TypeReference<List<String>>() {}); // {} создаёт anonymous class!
+// Jackson читает generic-параметр из байт-кода анонимного класса
+
+// Аналог в Guava:
+TypeToken<List<String>> token = new TypeToken<List<String>>() {};
+// token.getType() = java.util.List<java.lang.String>
+```
+
+**Почему это работает?** В байт-коде анонимного класса компилятор записывает:
+```
+class $1 extends TypeReference<java.util.List<java.lang.String>>
+```
+Это `Signature` атрибут в `.class` файле — он **не стирается** type erasure, потому что это метаданные класса, а не runtime тип поля/метода. `getGenericSuperclass()` читает именно эти метаданные.
+
+> [!WARNING] Ограничение Super Type Tokens
+> Каждый `new TypeReference<X>() {}` создаёт **новый анонимный класс** → новую запись в Metaspace. При использовании в горячих путях (например, в каждом запросе) кэшируй `TypeReference` в `static final` поле.
+
+```java
+// BAD: создаёт новый класс при каждом вызове
+List<String> parse(String json) {
+    return mapper.readValue(json, new TypeReference<List<String>>() {});
+}
+
+// GOOD: один класс на всё время работы JVM
+private static final TypeReference<List<String>> LIST_STRING_REF =
+    new TypeReference<List<String>>() {};
+
+List<String> parse(String json) {
+    return mapper.readValue(json, LIST_STRING_REF);
+}
+```
 
 ---
 

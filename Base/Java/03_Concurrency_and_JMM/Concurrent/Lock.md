@@ -1,3 +1,9 @@
+---
+title: "Lock (java.util.concurrent.locks)"
+tags: [java, concurrency, lock, reentrantlock, aqs, stampedlock, readwritelock]
+updated: 2026-03-11
+---
+
 # Lock (java.util.concurrent.locks)
 
 > [!QUOTE] Суть
@@ -616,3 +622,272 @@ public class VirtualCounter {
 ## 16. Заключение
 
 Интерфейс `Lock` предоставляет мощный и гибкий механизм синхронизации, превосходящий `synchronized` за счёт прерываемости, таймаутов и `Condition`. Реализации (`ReentrantLock`, `ReentrantReadWriteLock`, `StampedLock`) подходят для различных сценариев, от простых счётчиков до оптимистичного чтения. Основанные на AQS, они обеспечивают потокобезопасность и производительность. Поддержка виртуальных потоков (Java 21+) и лучшие практики минимизируют риски deadlock и ошибок. `Lock` — это идеальный выбор для сложной синхронизации в многопоточных приложениях.
+
+---
+
+## 17. Senior Insights
+
+### 17.1. AQS CLH Queue — внутренняя архитектура
+
+AQS (AbstractQueuedSynchronizer) использует **модифицированную CLH очередь** (Craig–Landin–Hagersten). В классической CLH каждый узел спинит на флаге **предыдущего** узла. AQS делает это через `LockSupport.park()`, избегая busy-wait.
+
+```
+AQS state (volatile int):
+  0 = unlocked
+  1 = locked (ReentrantLock)
+  N = locked N times (reentrant, same thread)
+
+CLH Queue (двусвязный список):
+  head ─► [Node(SIGNAL)] ─► [Node(SIGNAL)] ─► [Node(0)] = tail
+            (освобождён)     (ожидает)          (новый)
+
+Node.waitStatus:
+  CANCELLED =  1  — поток прерван, узел вычеркнуть
+  SIGNAL    = -1  — следующий узел нужно разбудить при unlock
+  CONDITION = -2  — поток ждёт на Condition.await()
+  PROPAGATE = -3  — shared lock: пробуждение распространить дальше
+  0               — начальное состояние
+```
+
+**Последовательность `lock()` (unfair mode):**
+```java
+// ReentrantLock.NonfairSync.lock()
+final void lock() {
+    // 1. Barging: сразу пробуем захватить без очереди
+    if (compareAndSetState(0, 1))
+        setExclusiveOwnerThread(currentThread());
+    else
+        acquire(1); // → tryAcquire → addWaiter → parkAndCheckInterrupt
+}
+
+// acquire(1) — шаблонный метод AQS:
+public final void acquire(int arg) {
+    if (!tryAcquire(arg) &&
+        acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+        selfInterrupt();
+}
+```
+
+**`acquireQueued` — цикл ожидания:**
+```java
+// Поток паркуется и просыпается только когда стал головой очереди
+final boolean acquireQueued(final Node node, int arg) {
+    for (;;) {
+        final Node p = node.predecessor();
+        if (p == head && tryAcquire(arg)) {  // только если мы следующие
+            setHead(node);    // стать новым head
+            p.next = null;    // GC старого head
+            return interrupted;
+        }
+        if (shouldParkAfterFailedAcquire(p, node))
+            parkAndCheckInterrupt(); // LockSupport.park(this)
+    }
+}
+```
+
+> [!INFO] Почему CLH эффективна
+> Каждый поток спинит/паркуется на своём узле. При `unlock()` пробуждается только следующий узел (`LockSupport.unpark(successor)`). Нет thundering herd эффекта в отличие от `Object.notifyAll()`.
+
+### 17.2. Fair vs Unfair — реальные трейдоффы
+
+```java
+// Unfair (по умолчанию)
+new ReentrantLock();
+new ReentrantLock(false);
+
+// Fair
+new ReentrantLock(true);
+```
+
+**Разница в `tryAcquire`:**
+```java
+// NonfairSync — barging разрешён:
+protected boolean tryAcquire(int acquires) {
+    return nonfairTryAcquire(acquires); // CAS без проверки очереди
+}
+
+// FairSync — строгий FIFO:
+protected boolean tryAcquire(int acquires) {
+    if (state == 0 && !hasQueuedPredecessors() && // ← ключевое отличие
+        compareAndSetState(0, acquires)) {
+        setExclusiveOwnerThread(current);
+        return true;
+    }
+    // reentrant...
+}
+```
+
+| Режим | Throughput | Latency | Starvation |
+|---|---|---|---|
+| **Unfair** (default) | Высокий | Непредсказуемый | Возможно |
+| **Fair** | ~20-30% ниже | Предсказуемый | Нет |
+
+> [!WARNING] Ловушка: Fair ≠ справедливый по времени
+> Fair lock гарантирует FIFO порядок *захвата*, но не равное время ожидания. При высокой конкуренции `hasQueuedPredecessors()` вызывается каждый раз — это дополнительный барьер памяти. Используй fair только если задержка критичнее throughput (real-time системы, координация heartbeat).
+
+### 17.3. ReentrantReadWriteLock — write starvation
+
+**Проблема:** При непрерывном потоке читателей писатель может голодать бесконечно.
+
+```java
+ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(); // unfair!
+
+// Читатели могут входить бесконечно, пока хоть один читает:
+// Reader1 → Reader2 → Reader3 → ... → WriterThread ждёт вечно
+```
+
+**Решение 1: Fair RWLock**
+```java
+ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true); // fair
+// Писатель встаёт в очередь, новые читатели за ним не пролезут
+// Цена: более низкий throughput чтения
+```
+
+**Решение 2: Lock downgrade (write → read)**
+```java
+// Паттерн: обновить кэш под write lock, затем опубликовать под read lock
+class Cache {
+    private volatile Map<String, Object> cache = new HashMap<>();
+    private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+    private final Lock readLock  = rwl.readLock();
+    private final Lock writeLock = rwl.writeLock();
+
+    public Object get(String key) {
+        readLock.lock();
+        try {
+            Object val = cache.get(key);
+            if (val != null) return val;
+        } finally {
+            readLock.unlock();
+        }
+
+        // Downgrade: захват write → захват read → отпускаем write
+        writeLock.lock();
+        try {
+            if (!cache.containsKey(key)) {      // double-check
+                cache.put(key, loadFromDB(key));
+            }
+            readLock.lock(); // ← захватываем read ДО отпуска write
+        } finally {
+            writeLock.unlock(); // отпускаем write, но read уже держим
+        }
+        try {
+            return cache.get(key);
+        } finally {
+            readLock.unlock();
+        }
+    }
+}
+```
+
+> [!WARNING] Lock upgrade запрещён!
+> `readLock → writeLock` (upgrade) **вызывает deadlock**. Нужно отпустить read, потом захватить write. В промежутке другой поток может изменить состояние — проверяй инвариант заново.
+
+### 17.4. StampedLock — детали и ловушки
+
+**StampedLock НЕ реентрантен!**
+```java
+StampedLock sl = new StampedLock();
+long stamp = sl.writeLock();
+long stamp2 = sl.writeLock(); // DEADLOCK — поток заблокирует сам себя
+```
+
+**StampedLock НЕ поддерживает Condition:**
+```java
+sl.asReadWriteLock().readLock().newCondition(); // UnsupportedOperationException
+// Если нужен Condition — используй ReentrantReadWriteLock
+```
+
+**Полный паттерн конвертации замков (optimistic → read → write):**
+```java
+public double distanceFromOrigin() {
+    // Фаза 1: оптимистичное чтение (без блокировки)
+    long stamp = sl.tryOptimisticRead();
+    double x = this.x, y = this.y;
+
+    // Фаза 2: если было изменение — fallback на read lock
+    if (!sl.validate(stamp)) {
+        stamp = sl.readLock();
+        try {
+            x = this.x;
+            y = this.y;
+        } finally {
+            sl.unlockRead(stamp);
+        }
+    }
+    return Math.sqrt(x * x + y * y);
+}
+
+// Конвертация read → write:
+public void conditionalUpdate(double newX) {
+    long stamp = sl.readLock();
+    try {
+        while (x < 0) {
+            long writeStamp = sl.tryConvertToWriteLock(stamp);
+            if (writeStamp != 0) {
+                stamp = writeStamp; // конвертация успешна
+                x = newX;
+                break;
+            } else {
+                sl.unlockRead(stamp);
+                stamp = sl.writeLock(); // явный захват write
+            }
+        }
+    } finally {
+        sl.unlock(stamp); // универсальный unlock
+    }
+}
+```
+
+**validate() — тонкость:**
+```java
+// validate() читает volatile поле — это memory barrier!
+// Компилятор/CPU не переставит чтения x,y ДО validate()
+long stamp = sl.tryOptimisticRead();
+double x = this.x; // может быть torn read на 32-bit платформах!
+double y = this.y;
+if (!sl.validate(stamp)) { ... }
+// На x86: работает, т.к. double read атомарен на 64-bit
+// На 32-bit JVM: ОПАСНО — double не атомарен
+```
+
+| | ReentrantLock | ReentrantReadWriteLock | StampedLock |
+|---|---|---|---|
+| Реентрантность | ✅ | ✅ | ❌ |
+| Condition | ✅ | ✅ | ❌ |
+| Оптимистичное чтение | ❌ | ❌ | ✅ |
+| Конвертация замков | ❌ | Lock downgrade only | ✅ |
+| Производительность | Средняя | Хорошая при read >> write | Отличная при read >> write |
+| Сложность | Низкая | Средняя | Высокая |
+
+### 17.5. LockSupport.park/unpark — модель permit
+
+`park()`/`unpark()` работают на основе **одного разрешения (permit)** на поток:
+
+```
+unpark(t) → permit = 1
+park()    → если permit=1: потребляет, продолжает сразу
+           → если permit=0: блокирует до unpark()
+
+Ключевые свойства:
+- permit НЕ накапливается: двойной unpark() = один permit
+- park() может вернуться spuriously (без причины) — всегда в цикле while!
+- park(blocker) принимает blocker для диагностики (jstack показывает объект)
+```
+
+```java
+// ПРАВИЛЬНО — цикл while против spurious wakeup:
+while (!condition) {
+    LockSupport.park(this); // this = blocker для jstack
+}
+
+// НЕПРАВИЛЬНО — if вместо while:
+if (!condition) {
+    LockSupport.park(this); // может вернуться раньше времени
+}
+```
+
+> [!INFO] Связано
+> - [[Synchronized]] — Mark Word и ObjectMonitor vs AQS CLH
+> - [[CAS и Unsafe]] — compareAndSetState внутри AQS
+> - [[Модель памяти Java (JMM) и барьеры памяти]] — happens-before при lock/unlock

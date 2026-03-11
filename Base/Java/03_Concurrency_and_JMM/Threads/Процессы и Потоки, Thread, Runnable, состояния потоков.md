@@ -1,7 +1,7 @@
 ---
 title: "Java — Процессы и Потоки, Thread, Runnable, Virtual Threads"
 tags: [java, concurrency, threads, runnable, thread-states, virtual-threads, java21, project-loom]
-updated: 2026-03-04
+updated: 2026-03-11
 ---
 
 # Процессы и Потоки в Java
@@ -499,6 +499,134 @@ public class AsyncService {
     ```
     
 
-## 15. Заключение
+## 15. Virtual Threads: внутреннее устройство (Senior)
 
-Процессы и потоки в Java обеспечивают выполнение программ и параллельное выполнение задач. Процессы изолированы и ресурсоёмки, а потоки позволяют эффективно использовать ресурсы внутри процесса. Java предоставляет гибкие способы создания потоков (`Thread`, `Runnable`, `ExecutorService`, виртуальные потоки), а их состояния (`NEW`, `RUNNABLE`, `TERMINATED`) помогают управлять жизненным циклом. Понимание JVM-реализации, планирования и современных возможностей (виртуальные потоки, `StructuredTaskScope`) позволяет создавать производительные и надёжные многопоточные приложения.
+### Архитектура Project Loom
+
+> [!INFO] Виртуальный поток = **Continuation + Scheduler + Carrier Thread**
+
+```
+Platform Thread (OS Thread):
+  JVM Thread ──────── OS Thread (kernel) ──── CPU Core
+  Stack: ~1-2 MB в нативной памяти ОС
+  Создание: ~1 ms, Переключение контекста: ~1-10 µs (kernel syscall)
+  Максимум: ~thousands (ограничение ОС/memory)
+
+Virtual Thread (Project Loom):
+  VirtualThread ──────── Continuation ──── ForkJoinPool Worker (Carrier)
+  Stack: ~KB в Java Heap (serialized continuation)
+  Создание: ~1 µs, "Переключение": ~100-300 ns (JVM, no syscall)
+  Максимум: millions (ограничение только Heap)
+
+Continuation — это capture и restore стека вызовов:
+  При блокирующей операции (I/O, sleep, await...):
+  1. VirtualThread.yield() — стек сериализуется в Heap
+  2. Carrier thread освобождается для другого виртуального потока
+  3. Когда I/O завершён — continuation восстанавливается на (любом) carrier
+```
+
+```java
+// Настройка scheduler (ForkJoinPool) — по умолчанию:
+// Parallelism = Runtime.getRuntime().availableProcessors()
+// Каждый carrier thread = platform thread в ForkJoinPool
+
+// Кастомный scheduler (редко нужен):
+ExecutorService scheduler = Executors.newFixedThreadPool(4);
+Thread.ofVirtual()
+    .scheduler(scheduler)  // использовать кастомный scheduler
+    .start(task);
+
+// Проверить является ли поток виртуальным:
+Thread.currentThread().isVirtual(); // true/false
+
+// Виртуальный поток НЕ имеет смысла в newFixedThreadPool:
+// BAD: пул из 100 виртуальных потоков — потеря преимущества
+Executors.newFixedThreadPool(100); // всё ещё 100 platform threads
+
+// GOOD: один виртуальный поток на задачу:
+try (var exec = Executors.newVirtualThreadPerTaskExecutor()) {
+    for (Request req : requests) {
+        exec.submit(() -> handleRequest(req)); // каждый запрос = свой virtual thread
+    }
+}
+```
+
+### Pinning — главная ловушка виртуальных потоков
+
+> [!WARNING] Pinning блокирует carrier thread — нивелирует всё преимущество Virtual Threads
+
+Виртуальный поток **прикрепляется (pinned)** к carrier thread и не может быть снят при:
+1. **`synchronized` блоке** — carrier thread блокируется вместе с virtual thread
+2. **Native method / JNI** — JVM не может demount continuation в нативном коде
+
+```java
+// ПЛОХО: Virtual thread pinned на synchronized
+class PinnedExample {
+    synchronized void slowDbQuery() { // PINNING!
+        // ... 200ms запрос к БД ...
+        // Всё это время carrier thread заблокирован
+        // Один carrier = один поток ОС = wasteful
+    }
+}
+
+// ХОРОШО: ReentrantLock вместо synchronized
+class UnpinnedExample {
+    private final ReentrantLock lock = new ReentrantLock();
+
+    void slowDbQuery() {
+        lock.lock();
+        try {
+            // ... 200ms запрос к БД ...
+            // Virtual thread yields на I/O → carrier освобождается
+            // ReentrantLock использует LockSupport.park() → virtual thread unmounts!
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+
+// Диагностика pinning:
+// JVM флаг: -Djdk.tracePinnedThreads=full (или =short)
+// Выведет stack trace при каждом pinning событии
+
+// JFR Event: jdk.VirtualThreadPinned
+// jcmd <pid> JFR.start duration=30s filename=pinning.jfr
+// В JMC: event browser → Virtual Thread Pinned
+```
+
+**Java 24 Update**: В Java 24 (JEP 491) `synchronized` был улучшен — виртуальные потоки теперь могут размонтироваться даже внутри `synchronized` блока в большинстве случаев. Pinning остаётся только для JNI.
+
+### Platform Thread vs Virtual Thread: сравнение
+
+| Характеристика | Platform Thread | Virtual Thread |
+|----------------|----------------|----------------|
+| Управление | ОС (kernel-level) | JVM (user-space) |
+| Stack Memory | ~1–2 MB (нативная) | ~KB (Java Heap) |
+| Создание | ~1 ms | ~1–10 µs |
+| Переключение контекста | ~1–10 µs (syscall) | ~100–300 ns (JVM) |
+| Максимальное количество | ~thousands | millions |
+| CPU-bound задачи | ✅ Оптимален | ❌ Нет преимущества |
+| I/O-bound задачи | ❌ Блокирует OS thread | ✅ Unmounts при блокировке |
+| ThreadLocal | ✅ Поддерживается | ⚠️ Медленно (копирование) → лучше ScopedValue |
+| `synchronized` | ✅ Нет проблем | ⚠️ Pinning (до Java 24) |
+| Debugging/profiling | ✅ Хорошая поддержка | ⚠️ Нужен обновлённый profiler |
+
+### Когда НЕ использовать Virtual Threads
+
+```java
+// 1. CPU-intensive задачи — виртуальных потоков будет много,
+//    но все они конкурируют за те же N carrier threads:
+// BAD:
+try (var exec = Executors.newVirtualThreadPerTaskExecutor()) {
+    exec.submit(() -> heavyComputation()); // нет I/O, нет yield, нет выгоды
+}
+// GOOD:
+ForkJoinPool.commonPool().submit(() -> heavyComputation());
+
+// 2. Библиотеки с pinning-кодом — JDBC drivers (до обновления),
+//    старые connection pools, JNI-based код
+
+// 3. ThreadLocal с большими объектами — при millions virtual threads
+//    каждый копирует ThreadLocal → много памяти
+//    Замена: ScopedValue (Java 21+)
+```

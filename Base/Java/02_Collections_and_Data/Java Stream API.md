@@ -1,7 +1,7 @@
 ---
 title: "Java Stream API — внутренняя архитектура и операции"
 tags: [java, stream-api, functional, collections, parallel-stream, collectors]
-updated: 2026-03-04
+updated: 2026-03-11
 ---
 
 # Java Stream API
@@ -651,6 +651,84 @@ long count = LongStream.rangeClosed(1, 10_000_000)
     .filter(n -> isPrime(n))  // CPU-bound, нет I/O, нет состояния
     .count();
 ```
+
+---
+
+## Gatherers (Java 22+, JEP 461/485)
+
+> [!INFO] Gatherers — это кастомные промежуточные операции для Stream API (аналог `Collector` для терминальных).
+> `Collector` = терминальная операция. `Gatherer` = промежуточная. Позволяет создавать **stateful intermediate operations** — то, что раньше требовало `reduce` или итеративного кода.
+
+```java
+import java.util.stream.Gatherer;
+import java.util.stream.Gatherers;
+
+// Встроенные Gatherers (java.util.stream.Gatherers):
+
+// 1. windowFixed(n) — скользящие окна фиксированного размера
+List<List<Integer>> windows = Stream.of(1, 2, 3, 4, 5)
+    .gather(Gatherers.windowFixed(3))
+    .toList();
+// [[1, 2, 3], [4, 5]]  ← последнее окно неполное
+
+// 2. windowSliding(n) — скользящее окно с шагом 1
+List<List<Integer>> sliding = Stream.of(1, 2, 3, 4, 5)
+    .gather(Gatherers.windowSliding(3))
+    .toList();
+// [[1,2,3], [2,3,4], [3,4,5]]
+
+// 3. scan(initial, fn) — накопительный reduce (как RunningTotal)
+List<Integer> runningTotal = Stream.of(1, 2, 3, 4, 5)
+    .gather(Gatherers.scan(() -> 0, (state, elem) -> state + elem))
+    .toList();
+// [1, 3, 6, 10, 15]
+
+// 4. fold(initial, fn) — финальный reduce в промежуточной позиции
+Optional<Integer> sum = Stream.of(1, 2, 3, 4, 5)
+    .gather(Gatherers.fold(() -> 0, Integer::sum))
+    .findFirst();
+
+// 5. mapConcurrent(n, fn) — параллельный map с ограниченным parallelism
+List<String> results = urls.stream()
+    .gather(Gatherers.mapConcurrent(10, url -> fetchUrl(url)))
+    .toList();
+// Выполняет max 10 fetch одновременно (не через commonPool!)
+```
+
+**Custom Gatherer — создание своего:**
+
+```java
+// Реализация: "взять элементы пока условие true, затем остановиться"
+// (аналог takeWhile, но с доступом к предыдущему элементу)
+Gatherer<Integer, List<Integer>, List<Integer>> consecutive =
+    Gatherer.ofSequential(
+        () -> new ArrayList<>(),          // initializer: создать state
+        (state, element, downstream) -> { // integrator: обработать элемент
+            if (state.isEmpty() || element == state.getLast() + 1) {
+                state.add(element);
+                return true; // продолжить
+            } else {
+                downstream.push(new ArrayList<>(state)); // выдать группу
+                state.clear();
+                state.add(element);
+                return true;
+            }
+        },
+        (state, downstream) -> {           // finisher: обработать остаток
+            if (!state.isEmpty()) downstream.push(new ArrayList<>(state));
+        }
+    );
+
+List<List<Integer>> grouped = Stream.of(1, 2, 3, 7, 8, 9, 15)
+    .gather(consecutive)
+    .toList();
+// [[1, 2, 3], [7, 8, 9], [15]]
+```
+
+> [!INFO] Статус Gatherers
+> - Java 22: Preview (JEP 461)
+> - Java 23: Second Preview (JEP 473)
+> - **Java 24: Финализированы** (JEP 485) — стабильный API
 
 ---
 

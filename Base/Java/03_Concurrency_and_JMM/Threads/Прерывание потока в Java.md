@@ -1,3 +1,9 @@
+---
+title: "Прерывание потока в Java"
+tags: [java, concurrency, thread, interrupt, nio, virtual-threads]
+updated: 2026-03-11
+---
+
 # Прерывание потока в Java
 
 > [!QUOTE] Суть
@@ -432,3 +438,181 @@ public class StructuredInterrupt {
 ## 11. Заключение
 
 Прерывание потоков в Java — кооперативный механизм, позволяющий безопасно завершить или изменить работу потока. Методы `interrupt()`, `isInterrupted()` и `interrupted()` вместе с обработкой `InterruptedException` обеспечивают гибкое управление. Устаревшие методы (`stop()`, `suspend()`, `resume()`) небезопасны и не используются. Современные возможности (виртуальные потоки, `StructuredTaskScope`) упрощают управление прерываниями. Понимание JVM-реализации, правильная обработка исключений и следование лучшим практикам позволяют создавать надёжные многопоточные приложения.
+
+---
+
+## Senior Insights
+
+### S1. isInterrupted() vs Thread.interrupted() — критическая разница
+
+Самая частая ошибка — смешать эти два метода:
+
+```java
+// isInterrupted() — INSTANCE метод, НЕ сбрасывает флаг:
+thread.isInterrupted();                     // проверяет флаг потока thread
+Thread.currentThread().isInterrupted();     // проверяет флаг текущего потока
+// Флаг остаётся установленным!
+
+// Thread.interrupted() — STATIC метод, СБРАСЫВАЕТ флаг:
+boolean wasInterrupted = Thread.interrupted(); // читает И сбрасывает флаг
+// После вызова: флаг = false, даже если был true
+```
+
+**Классическая ошибка — случайный сброс флага:**
+```java
+// Код библиотеки (например, фреймворк):
+void processTask() {
+    if (Thread.interrupted()) { // СБРОСИЛ флаг!
+        throw new InterruptedException();
+    }
+    // теперь другой код думает что прерывания не было
+}
+
+// Твой код:
+thread.interrupt();
+processTask(); // ← может украсть флаг прерывания
+while (!Thread.currentThread().isInterrupted()) { // ← никогда не выйдет!
+    ...
+}
+```
+
+> [!WARNING] Правило: `Thread.interrupted()` используй только когда хочешь ЯВНО сбросить флаг и обработать прерывание сам. В остальных случаях — `isInterrupted()`.
+
+### S2. interrupt() и NIO: ClosedByInterruptException
+
+`Thread.sleep()` / `Object.wait()` бросают `InterruptedException`. Но NIO-каналы (`SocketChannel`, `FileChannel`) реализуют `InterruptibleChannel` — при прерывании потока канал **закрывается**:
+
+```java
+// Blocking I/O (java.io) — interrupt прерывает через исключение:
+ServerSocket serverSocket = new ServerSocket(8080);
+Thread ioThread = new Thread(() -> {
+    try {
+        Socket conn = serverSocket.accept(); // блокируется
+    } catch (IOException e) {
+        // НЕ прерывается через interrupt()!
+        // Нужно явно закрыть serverSocket снаружи
+    }
+});
+
+// NIO (java.nio) — interrupt закрывает канал!
+SocketChannel channel = SocketChannel.open();
+channel.configureBlocking(true);
+
+Thread nioThread = new Thread(() -> {
+    try {
+        ByteBuffer buf = ByteBuffer.allocate(1024);
+        channel.read(buf); // блокируется
+    } catch (ClosedByInterruptException e) {
+        // ← бросается при interrupt()
+        // Канал закрыт! Нельзя переиспользовать
+        System.out.println("Channel closed by interrupt");
+    } catch (IOException e) { ... }
+});
+
+nioThread.start();
+nioThread.interrupt(); // → ClosedByInterruptException + channel закрыт
+```
+
+**Механизм:** `InterruptibleChannel` регистрирует поток через `Interruptible` объект. При `thread.interrupt()` JVM проверяет: есть ли зарегистрированный `Interruptible`? Если да — вызывает `blocker.interrupt(thread)` → `channel.close()`.
+
+```
+Thread.interrupt() →
+  1. Установить флаг
+  2. if (blocker != null): blocker.interrupt(this)  // закрыть канал
+  3. LockSupport.unpark(this)  // разбудить если паркован
+```
+
+### S3. Прерывание и виртуальные потоки
+
+Виртуальные потоки (Java 21+) прерываются **так же**, но есть важные отличия:
+
+```java
+Thread vt = Thread.ofVirtual().start(() -> {
+    try {
+        // Виртуальный поток припаркован на carrier thread
+        Thread.sleep(Duration.ofSeconds(10));
+    } catch (InterruptedException e) {
+        // Carrier thread не прерывается — только виртуальный
+        Thread.currentThread().interrupt();
+        System.out.println("Virtual thread interrupted");
+    }
+});
+
+vt.interrupt(); // прерывает виртуальный поток, не carrier
+```
+
+**Виртуальный поток + blocking I/O:**
+```java
+// При вызове blocking socket read на виртуальном потоке:
+// JVM автоматически переводит в NIO под капотом
+// и паркует виртуальный поток (не carrier thread)
+// При interrupt(): виртуальный поток разпаркуется + InterruptedException
+// Carrier thread НЕ затронут — продолжает выполнять других
+```
+
+**Виртуальный поток + пиннинг (synchronized блок):**
+```java
+Thread vt = Thread.ofVirtual().start(() -> {
+    synchronized (lock) {  // ← пиннинг carrier thread
+        try {
+            Thread.sleep(1000); // виртуальный поток пиннирован
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            // Carrier thread НЕ освободится пока не выйдем из synchronized
+        }
+    }
+});
+// Избегай синхронизированных блоков в виртуальных потоках!
+// Java 24 (JEP 491): synchronized больше не пиннирует carrier thread
+```
+
+### S4. Правильный паттерн: interrupt-aware задача
+
+```java
+// Полный корректный паттерн для задачи с cleanup:
+public class GracefulTask implements Runnable {
+
+    @Override
+    public void run() {
+        try {
+            while (!Thread.currentThread().isInterrupted()) {
+                processOneItem();
+            }
+        } catch (InterruptedException e) {
+            // Восстановить флаг — пусть вызывающий код тоже знает
+            Thread.currentThread().interrupt();
+        } finally {
+            cleanup(); // всегда выполнится
+        }
+        System.out.println("Task gracefully stopped");
+    }
+
+    private void processOneItem() throws InterruptedException {
+        // I/O операция — может бросить InterruptedException
+        SomeBlockingAPI.call();
+    }
+
+    private void cleanup() {
+        // закрыть ресурсы, flush буферы, etc.
+    }
+}
+
+// ExecutorService + awaiting termination:
+ExecutorService exec = Executors.newVirtualThreadPerTaskExecutor();
+exec.submit(new GracefulTask());
+exec.shutdown();
+try {
+    if (!exec.awaitTermination(5, TimeUnit.SECONDS)) {
+        exec.shutdownNow(); // принудительный interrupt всех задач
+        exec.awaitTermination(1, TimeUnit.SECONDS);
+    }
+} catch (InterruptedException e) {
+    exec.shutdownNow();
+    Thread.currentThread().interrupt();
+}
+```
+
+> [!INFO] Связано
+> - [[Процессы и Потоки, Thread, Runnable, состояния потоков]] — состояния WAITING/BLOCKED/RUNNABLE
+> - [[Synchronized]] — interrupt не прерывает ожидание монитора!
+> - [[Lock]] — `lockInterruptibly()` — прерываемый захват блокировки

@@ -1,7 +1,7 @@
 ---
 title: "Java Reflection API — динамический анализ классов"
 tags: [java, reflection, class-loading, dynamic-proxy, annotations]
-updated: 2026-03-04
+updated: 2026-03-11
 ---
 
 # Java Reflection API
@@ -390,9 +390,184 @@ for (Method method : methods) {
 5. **Учитывайте модульную систему**: В Java 9+ проверяйте, открыт ли модуль для рефлексии.
 6. **Избегайте побочных эффектов**: Рефлексия должна быть предсказуемой; не изменяйте структуру классов неожиданным образом.
 
-> [!INFO] Missing Info
-> Не освещены **MethodHandles** (java.lang.invoke) — более быстрая альтернатива Reflection API, доступная с Java 7.
-> Также стоит добавить **VarHandle** (Java 9+) для атомарных операций над полями без Unsafe.
+## Dynamic Proxy: внутреннее устройство
+
+> [!INFO] Senior: что происходит внутри Proxy.newProxyInstance()
+> `Proxy` генерирует новый `.class` файл прямо в runtime — без ASM и без предварительной компиляции. Понимание этого механизма критично для работы с Spring AOP, Hibernate lazy loading, MockitoМ
+
+```java
+// Когда вызывается Proxy.newProxyInstance(...):
+// 1. JVM генерирует байт-код нового класса ($Proxy0, $Proxy1, ...)
+// 2. Класс расширяет java.lang.reflect.Proxy
+// 3. Реализует все переданные интерфейсы
+// 4. Каждый метод интерфейса делегирует в InvocationHandler.invoke()
+
+// Сгенерированный класс (эквивалент):
+public final class $Proxy0 extends Proxy implements Hello {
+    private static final Method m1; // hello()
+
+    static {
+        m1 = Class.forName("Hello").getMethod("say");
+    }
+
+    public $Proxy0(InvocationHandler h) { super(h); }
+
+    @Override
+    public void say() {
+        // Каждый вызов проходит через h.invoke():
+        h.invoke(this, m1, null);
+    }
+}
+
+// Почему это медленно:
+// 1. Каждый вызов метода = минимум 2 виртуальных вызова + boxing аргументов
+// 2. Method объект передаётся в invoke() — lookup в runtime
+// 3. args[] создаётся как Object[] — allocation на каждый вызов с параметрами
+
+// Как посмотреть сгенерированный класс:
+// JDK 8-: -Dsun.misc.ProxyGenerator.saveGeneratedFiles=true
+// JDK 9+: -Djdk.proxy.ProxyGenerator.saveGeneratedFiles=true
+```
+
+**Ограничения JDK Dynamic Proxy:**
+- Работает только с **интерфейсами** — нельзя проксировать класс напрямую
+- Spring использует CGLIB/ByteBuddy для прокси классов без интерфейса
+- Каждый прокси-класс загружается в ClassLoader → занимает Metaspace
+
+**Альтернативы для класс-прокси:**
+
+```java
+// CGLIB (старый Spring): наследование от целевого класса
+// final классы нельзя проксировать!
+// class UserServiceProxy extends UserService { ... }
+
+// ByteBuddy (modern Spring 6+, Mockito):
+Object proxy = new ByteBuddy()
+    .subclass(TargetClass.class)
+    .method(ElementMatchers.any())
+    .intercept(MethodDelegation.to(interceptor))
+    .make()
+    .load(ClassLoader.getSystemClassLoader())
+    .getLoaded()
+    .newInstance();
+```
+
+---
+
+## MethodHandle vs Reflection: производительность и когда что использовать
+
+> [!INFO] MethodHandle (java.lang.invoke) — более быстрая альтернатива Method.invoke(), добавленная в Java 7
+
+```java
+import java.lang.invoke.*;
+
+// REFLECTION: медленный путь
+Method reflMethod = String.class.getDeclaredMethod("length");
+int len = (int) reflMethod.invoke("hello"); // boxing, security checks, null varargs
+
+// METHOD HANDLE: быстрый путь
+MethodHandles.Lookup lookup = MethodHandles.lookup();
+MethodHandle mhLength = lookup.findVirtual(
+    String.class,         // класс
+    "length",             // имя метода
+    MethodType.methodType(int.class) // (returnType, paramTypes...)
+);
+int len2 = (int) mhLength.invoke("hello"); // почти как прямой вызов!
+
+// MethodHandle для ПРИВАТНЫХ методов (нужен правильный Lookup):
+// MethodHandles.privateLookupIn(TargetClass.class, MethodHandles.lookup())
+MethodHandles.Lookup privateLookup = MethodHandles.privateLookupIn(
+    MyClass.class, MethodHandles.lookup()
+);
+MethodHandle mhPrivate = privateLookup.findSpecial(
+    MyClass.class, "privateMethod",
+    MethodType.methodType(void.class),
+    MyClass.class
+);
+```
+
+**Сравнение производительности (JMH бенчмарк, приблизительно):**
+
+| Способ вызова | Относительная скорость | Примечания |
+|---------------|----------------------|------------|
+| Прямой вызов `obj.method()` | 1x (baseline) | JIT инлайнит |
+| MethodHandle (после warmup) | ~1–2x | JIT инлайнит через `invokedynamic` |
+| MethodHandle (до warmup) | ~5–10x медленнее | Интерпретируется |
+| `Method.invoke()` (cached) | ~10–50x медленнее | Security checks, boxing |
+| `Method.invoke()` + `setAccessible(false)` | ~50–100x медленнее | Security checks дорогие |
+| `Method.invoke()` + `forName` каждый раз | ~1000x медленнее | lookup дорогой |
+
+**Когда JIT инлайнит MethodHandle:** после ~10000 вызовов (C2 compilation threshold) `invokedynamic` + MethodHandle компилируются почти как прямой вызов. Поэтому в горячих путях (сериализация, маппинг) MethodHandle может сравняться с прямым вызовом.
+
+```java
+// Правильный паттерн — кэшировать MethodHandle:
+class FastMapper {
+    // Статическое поле — MethodHandle создаётся один раз
+    private static final MethodHandle GET_NAME;
+    static {
+        try {
+            GET_NAME = MethodHandles.lookup()
+                .findVirtual(Person.class, "getName",
+                    MethodType.methodType(String.class));
+        } catch (ReflectiveOperationException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
+    String getName(Person p) throws Throwable {
+        return (String) GET_NAME.invoke(p); // fast path после warmup
+    }
+
+    // Ещё быстрее: invokeExact (точные типы, нет boxing/unboxing)
+    String getNameExact(Person p) throws Throwable {
+        return (String) GET_NAME.invokeExact(p); // компилятор проверяет сигнатуру
+    }
+}
+```
+
+> [!WARNING] `invoke` vs `invokeExact`
+> `invoke` принимает любые совместимые типы (с приведением). `invokeExact` требует **точного** совпадения типов на стеке — иначе `WrongMethodTypeException`. `invokeExact` быстрее, но строже.
+
+---
+
+## Java 9+ Module System и Reflection
+
+```java
+// Проблема: модульная система блокирует setAccessible(true) для закрытых модулей
+// java.lang: java.base module — закрыт по умолчанию
+
+// Ошибка без opens:
+Field f = String.class.getDeclaredField("value");
+f.setAccessible(true); // → InaccessibleObjectException!
+// "Unable to make field accessible: module java.base does not 'opens java.lang'"
+
+// Решения:
+
+// 1. module-info.java (правильный способ):
+// module my.module {
+//     requires java.base;
+// }
+// А в java.base модуле добавить (через JDK patches/tests):
+// opens java.lang to my.module;
+
+// 2. JVM флаги для тестов/инструментов (НЕ для production):
+// --add-opens java.base/java.lang=ALL-UNNAMED
+// --add-opens java.base/java.util=ALL-UNNAMED
+
+// 3. MethodHandles.privateLookupIn (правильный production способ):
+// Позволяет получить Lookup с правами целевого модуля
+// Модуль должен явно экспортировать пакет для этого
+
+// Паттерн для фреймворков (Spring, Hibernate):
+// Используют MethodHandles.privateLookupIn + MethodHandle
+// вместо Field.setAccessible(true) — это работает с Java 9+ без opens
+
+// Пример как Spring читает поля без setAccessible в Java 17+:
+MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(target.getClass(),
+    MethodHandles.lookup());
+VarHandle vh = lookup.findVarHandle(target.getClass(), "fieldName", String.class);
+String value = (String) vh.get(target); // работает без opens!
+```
 
 ## Связанные темы
 

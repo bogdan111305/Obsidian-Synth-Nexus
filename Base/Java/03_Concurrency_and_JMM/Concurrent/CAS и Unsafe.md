@@ -1,5 +1,9 @@
 # Compare-And-Swap (CAS) в Java
 
+---
+updated: 2026-03-11
+---
+
 > [!QUOTE] Суть
 > **CAS** (Compare-And-Swap): атомарно сравни текущее значение с ожидаемым, если совпадает — обнови. Операция одна (`cmpxchg` на x86). Основа всех lock-free структур. Проблема: **ABA** (значение изменилось с A→B→A, CAS не заметит). Решение: `AtomicStampedReference`.
 
@@ -374,6 +378,81 @@ public class LockFreeStack<T> {
 - Подвержен ABA-проблеме (решение: добавить `AtomicStampedReference`).
 
 ## Senior Insights
+
+### compareAndExchange и weakCompareAndSet (Java 9+ VarHandle)
+
+> [!INFO] В Java 9+ появились более мощные CAS-примитивы, которые позволяют писать более эффективные lock-free алгоритмы
+
+**`compareAndSet` vs `compareAndExchange` vs `weakCompareAndSet`:**
+
+```java
+import java.lang.invoke.*;
+
+class Node { int val; Node next; }
+AtomicReference<Node> head = new AtomicReference<>();
+
+// 1. compareAndSet (старый) — возвращает boolean
+boolean success = head.compareAndSet(expected, newNode);
+
+// 2. compareAndExchange (Java 9+, VarHandle) — возвращает WITNESS (фактическое значение)
+// Нет необходимости в отдельном get() при неудаче!
+private static final VarHandle HEAD;
+static { /* lookup */ }
+
+Node witness = (Node) HEAD.compareAndExchange(queue, expected, newNode);
+if (witness == expected) {
+    // success
+} else {
+    // witness — фактическое текущее значение, используем напрямую как новый expected
+    // Избегаем лишний volatile read!
+    retryWith(witness); // вместо retryWith(head.get())
+}
+
+// 3. weakCompareAndSet (ослабленный CAS) — может "ложно" вернуть false
+// Не гарантирует ordering (Acquire/Release), но БЫСТРЕЕ на ARM
+// Использовать ТОЛЬКО в spin-loop где failure — нормальная ситуация:
+void updateWithWeak() {
+    int current;
+    do {
+        current = (int) COUNT.getVolatile(this);
+    } while (!COUNT.weakCompareAndSet(this, current, current + 1));
+    // weakCompareAndSet может вернуть false даже при совпадении — поэтому в loop
+    // Но каждая итерация дешевле полного compareAndSet
+}
+```
+
+**Сравнение вариантов CAS:**
+
+| Метод | Возвращает | False failure? | Memory order | Использование |
+|-------|-----------|----------------|--------------|---------------|
+| `compareAndSet` | `boolean` | Нет | volatile (full) | Общий случай |
+| `compareAndExchange` | witness value | Нет | volatile (full) | Когда нужно знать фактическое значение |
+| `weakCompareAndSet` | `boolean` | **Да!** | opaque | Tight spin-loop на ARM |
+| `compareAndExchangeAcquire` | witness | Нет | acquire | Начало critical section |
+| `compareAndExchangeRelease` | witness | Нет | release | Конец critical section |
+
+### x86 CMPXCHG vs ARM LL/SC — почему weak CAS существует
+
+```
+x86: CMPXCHG — атомарный hardware, false failure невозможен
+     if (MEM[addr] == expected) { MEM[addr] = new; return success; }
+     else { return MEM[addr]; }  // гарантированно атомарно
+
+ARM: LL/SC (LDXR/STXR) — Load-Link / Store-Conditional
+     1. LDXR r0, [addr]   — Load-Exclusive: читаем + помечаем cache line
+     2. (вычисления...)
+     3. STXR r1, r2, [addr] — Store-Conditional: записываем ТОЛЬКО если cache line
+                               не была инвалидирована другим ядром
+     Если cache line инвалидирована (другой поток записал что-либо в ту же строку,
+     даже не в тот же адрес!) → STXR возвращает 1 (failure) без записи
+     → это "spurious failure" — НЕ значит что другой поток изменил именно наше значение!
+
+Поэтому:
+- На x86: weakCompareAndSet = compareAndSet (нет разницы)
+- На ARM: weakCompareAndSet = голый LDXR/STXR без retry-loop → быстрее, но может зафейлиться
+```
+
+**Практически:** на AWS Graviton (ARM) использование `weakCompareAndSet` в плотных spin-loops может дать 15-30% ускорение по сравнению с `compareAndSet` из-за меньшего количества барьеров памяти.
 
 ### VarHandle вместо Unsafe — почему это важно
 

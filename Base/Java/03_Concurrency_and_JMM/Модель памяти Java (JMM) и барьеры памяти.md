@@ -1,7 +1,7 @@
 ---
 title: "Модель памяти Java (JMM) и барьеры памяти"
 tags: [java, jmm, memory-model, happens-before, volatile, barriers, concurrency]
-updated: 2026-03-04
+updated: 2026-03-11
 ---
 
 # Модель памяти Java (JMM) и барьеры памяти
@@ -283,10 +283,110 @@ class UnsafePublication {
 }
 ```
 
+## False Sharing и @Contended
+
+> [!WARNING] Senior-ловушка: False Sharing убивает производительность в параллельных алгоритмах
+> Два независимых volatile-поля могут оказаться в **одной кэш-линии** (обычно 64 байта). Запись в одно поле инвалидирует кэш другого ядра — поток на другом ядре вынужден заново читать кэш-линию, хотя его поле не менялось. Это **false sharing**: данные не shared, но кэш-линия — да.
+
+```java
+// BAD: counter0 и counter1 скорее всего в одной кэш-линии
+class FalseShared {
+    volatile long counter0 = 0; // байты 0-7 в объекте
+    volatile long counter1 = 0; // байты 8-15 → одна 64-байтовая кэш-линия!
+}
+
+// GOOD: padding вручную (до Java 8)
+class PaddedCounter {
+    volatile long counter0 = 0;
+    long p1, p2, p3, p4, p5, p6, p7; // 7 * 8 = 56 байт padding
+    volatile long counter1 = 0;       // гарантированно в другой кэш-линии
+}
+
+// BEST: @Contended (Java 8+, только с -XX:-RestrictContended)
+class ContendedCounter {
+    @jdk.internal.vm.annotation.Contended
+    volatile long counter0 = 0;
+
+    @jdk.internal.vm.annotation.Contended
+    volatile long counter1 = 0;
+    // JVM автоматически добавляет padding до/после поля
+}
+```
+
+**Где встречается false sharing в production:**
+- Счётчики метрик в разных потоках (request counters)
+- Флаги состояния потоков (running, interrupted)
+- Поля `Thread` — JDK сам использует `@Contended` для `Thread.threadLocalRandomSeed`
+- `LongAdder` внутри использует `@Contended` для Cell-массива — именно поэтому быстрее `AtomicLong` при contention
+
+**Диагностика:** async-profiler (`-e cache-misses`), JFR event `jdk.CPULoad`, Linux `perf stat -e cache-misses,cache-references`.
+
+---
+
+## VarHandle: таблица режимов доступа (Memory Ordering)
+
+Java 9+ предоставляет 5 режимов памяти для каждой операции с `VarHandle` — от самого слабого до самого сильного:
+
+| Режим | Read | Write | RMW | Аналог | Барьеры | Стоимость |
+|-------|------|-------|-----|--------|---------|-----------|
+| **Plain** | `get()` | `set()` | — | обычное поле | нет | ≈ 0 |
+| **Opaque** | `getOpaque()` | `setOpaque()` | — | — | нет HB, но атомарность + coherent | мин. |
+| **Acquire/Release** | `getAcquire()` | `setRelease()` | CAS | `volatile` на x86 | LoadLoad+LoadStore / StoreStore+StoreLoad | средняя |
+| **Volatile** | `getVolatile()` | `setVolatile()` | CAS | `volatile` поле | полный fence | высокая |
+| **CAS** | — | — | `compareAndSet()` | `AtomicXxx.compareAndSet()` | полный fence | высокая |
+
+```java
+class RingBuffer<T> {
+    private final Object[] data;
+    private static final VarHandle DATA =
+        MethodHandles.arrayElementVarHandle(Object[].class);
+
+    // Продюсер пишет данные, потом публикует индекс
+    void publish(int slot, T item, int newHead) {
+        DATA.setRelease(data, slot, item);   // RELEASE: item записан ДО публикации
+        head.setRelease(this, newHead);      // RELEASE: другие потоки увидят item
+    }
+
+    // Консьюмер читает индекс, потом читает данные
+    @SuppressWarnings("unchecked")
+    T consume(int slot) {
+        int h = (int) head.getAcquire(this); // ACQUIRE: видим всё до RELEASE
+        return (T) DATA.getAcquire(data, slot); // ACQUIRE: item гарантированно готов
+    }
+    // Acquire/Release пара = happens-before без StoreLoad fence → быстрее volatile
+}
+```
+
+> [!INFO] Когда acquire/release быстрее volatile?
+> На x86 `volatile write` = `StoreLoad` (дорогой `MFENCE` или `LOCK XCHG`). `setRelease` на x86 бесплатен (x86 уже имеет TSO — total store order). На **ARM** оба требуют явных `dmb` барьеров, но `setRelease` + `getAcquire` = `stlr` + `ldar`, что дешевле `stlr` + `ldar` + `dmb ish` для full volatile. Выигрыш реален на ARM-серверах (AWS Graviton).
+
+---
+
+## JMM и Virtual Threads (Java 21+)
+
+Виртуальные потоки (Project Loom) **полностью соблюдают JMM** — все happens-before правила применяются одинаково. Но есть нюансы:
+
+1. **Pinning при synchronized**: виртуальный поток "прикрепляется" к carrier thread при входе в `synchronized` блок — блокирует carrier на время блокировки. `volatile` не вызывает pinning.
+2. **Heap stack**: стек виртуального потока живёт в Heap (не в нативном стеке ОС). При unmount — стек сериализуется в Heap, при mount — восстанавливается. JMM гарантирует корректность этой операции.
+3. **Scoped Values vs ThreadLocal**: `ScopedValue` (Java 21+) использует O(1) lookup через inherited scope вместо O(n) копирования ThreadLocal — JMM гарантии сохраняются через happens-before на `ScopedValue.where()` → `run()`.
+
+```java
+// volatile-флаг корректно работает с виртуальными потоками:
+volatile boolean ready = false;
+
+Thread.ofVirtual().start(() -> {
+    ready = true; // volatile write — HB перед любым последующим read
+});
+// ... при чтении ready == true гарантировано всё написанное до volatile write
+```
+
+---
+
 ## Связанные темы
 
 - [[Java Memory Structure]] — Heap, Stack, Metaspace, GC
-- [[Атомарность операций и Volatile]] — применение volatile на практике
+- [[Атомарность операций и Volatile]] — практическое применение volatile: паттерны, ловушки, lazySet
 - [[Synchronized]] — монитор и критические секции
 - [[CAS и Unsafe]] — low-level атомарные операции
 - [[Процессы и Потоки, Thread, Runnable, состояния потоков|Виртуальные потоки Java 21]] — влияние Loom на JMM
+- [[Scoped Values (Java 21, JEP 446)]] — ThreadLocal replacement с JMM-гарантиями

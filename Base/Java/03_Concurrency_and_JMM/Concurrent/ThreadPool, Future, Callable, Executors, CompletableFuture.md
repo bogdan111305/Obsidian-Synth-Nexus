@@ -525,6 +525,160 @@ public class DataProcessing {
 - Ограниченная очередь (`ArrayBlockingQueue`) предотвращает перегрузку.
 - `Future` собирает результаты.
 
+## Senior Insights
+
+### ThreadPoolExecutor: логика заполнения (очень важно!)
+
+> [!WARNING] Контринтуитивная логика: `ThreadPoolExecutor` сначала заполняет ОЧЕРЕДЬ, потом создаёт дополнительные потоки
+
+```
+Логика обработки submit(task) в ThreadPoolExecutor:
+
+1. if (running threads < corePoolSize):
+     → создать новый thread, выполнить task (даже если очередь пустая!)
+     → corePool threads всегда живут (keepAliveTime не применяется, если не allowCoreThreadTimeOut)
+
+2. if (running threads >= corePoolSize):
+     → попробовать добавить task в workQueue
+     → если queue.offer(task) == true: задача в очереди, потоки её заберут
+     → если queue.offer(task) == false (очередь полна):
+
+3. if (queue full AND running threads < maximumPoolSize):
+     → создать новый thread (выше corePoolSize), выполнить task
+     → эти потоки живут keepAliveTime после простоя
+
+4. if (queue full AND running threads >= maximumPoolSize):
+     → RejectedExecutionHandler!
+     → Default: AbortPolicy → throw RejectedExecutionException
+     → CallerRunsPolicy → выполнить task в вызывающем потоке (backpressure!)
+     → DiscardPolicy → молча отбросить
+     → DiscardOldestPolicy → выбросить самую старую задачу из очереди
+```
+
+```java
+// ПРИМЕР: почему Executors.newFixedThreadPool опасен
+Executors.newFixedThreadPool(4);
+// Внутри: new ThreadPoolExecutor(4, 4, 0, SECONDS, new LinkedBlockingQueue<>())
+// LinkedBlockingQueue() = НЕОГРАНИЧЕННАЯ очередь (Integer.MAX_VALUE capacity)!
+// При нагрузке: очередь растёт бесконечно → OOM
+
+// ПРАВИЛЬНО: явные параметры с bounded queue
+ThreadPoolExecutor executor = new ThreadPoolExecutor(
+    4,                              // corePoolSize
+    8,                              // maximumPoolSize
+    60, TimeUnit.SECONDS,           // keepAliveTime для core+ threads
+    new ArrayBlockingQueue<>(200),  // bounded queue!
+    new ThreadFactory() {
+        AtomicInteger count = new AtomicInteger();
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "worker-" + count.incrementAndGet());
+            t.setDaemon(true); // не блокировать JVM shutdown
+            return t;
+        }
+    },
+    new ThreadPoolExecutor.CallerRunsPolicy() // backpressure вместо отбрасывания
+);
+
+// Мониторинг:
+executor.getPoolSize();        // текущий размер пула
+executor.getActiveCount();     // активные (выполняющие) потоки
+executor.getQueue().size();    // очередь
+executor.getCompletedTaskCount(); // завершённые
+```
+
+### CompletableFuture: Senior паттерны и ловушки
+
+```java
+// 1. Цепочка: thenApply (sync) vs thenApplyAsync (async)
+CompletableFuture<String> result = CompletableFuture
+    .supplyAsync(() -> fetchUser(id), ioExecutor)   // I/O executor
+    .thenApply(user -> user.getName())               // sync: в том же потоке что завершил supplyAsync
+    .thenApplyAsync(name -> enrich(name), cpuExecutor) // async: в cpuExecutor
+    .thenApply(enriched -> format(enriched));        // sync: в cpuExecutor потоке
+
+// ЛОВУШКА: без explicit executor → thenApplyAsync использует ForkJoinPool.commonPool()
+// Не используй для I/O операций!
+
+// 2. Обработка исключений:
+CompletableFuture<String> safe = future
+    .thenApply(this::process)
+    .exceptionally(ex -> {
+        log.error("Failed", ex);
+        return "default";         // recover value
+    })
+    .whenComplete((result, ex) -> { // ВСЕГДА выполняется (success или failure)
+        metrics.record(ex == null ? "ok" : "error");
+        // не может изменить результат!
+    })
+    .handle((result, ex) -> {       // может изменить результат
+        if (ex != null) return fallback();
+        return result;
+    });
+
+// 3. Параллельное выполнение:
+// allOf — ждём все, тип Void
+CompletableFuture<Void> all = CompletableFuture.allOf(f1, f2, f3);
+all.thenRun(() -> {
+    String r1 = f1.join(); // join() = get() без checked exception
+    String r2 = f2.join(); // безопасно после allOf
+});
+
+// anyOf — ждём первый (любой)
+CompletableFuture<Object> first = CompletableFuture.anyOf(f1, f2, f3);
+
+// 4. Timeout (Java 9+):
+future.orTimeout(5, TimeUnit.SECONDS);             // TimeoutException при превышении
+future.completeOnTimeout("default", 5, SECONDS);  // default value при превышении
+
+// 5. Цепочка с flat-map (thenCompose):
+CompletableFuture<User> getUser(long id) { ... }
+CompletableFuture<Order> getOrder(User user) { ... }
+
+// thenApply даст CompletableFuture<CompletableFuture<Order>> — НЕПРАВИЛЬНО
+// thenCompose = flatMap → CompletableFuture<Order>
+CompletableFuture<Order> order = getUser(userId)
+    .thenCompose(user -> getOrder(user)); // thenCompose = flatMap!
+
+// 6. ЛОВУШКА: join() в потоке ForkJoinPool — deadlock!
+// BAD: join() блокирует ForkJoinPool worker thread, который нужен для выполнения
+CompletableFuture.supplyAsync(() -> {
+    return CompletableFuture.supplyAsync(() -> "inner").join(); // МОЖЕТ ДЕДЛОКНУТЬ!
+}, ForkJoinPool.commonPool());
+
+// GOOD: thenCompose вместо вложенного join():
+CompletableFuture.supplyAsync(() -> "outer")
+    .thenCompose(outer -> CompletableFuture.supplyAsync(() -> outer + "inner"));
+```
+
+### ThreadPool + Virtual Threads: когда что использовать (Java 21+)
+
+```java
+// I/O-bound: виртуальные потоки (один поток на задачу)
+try (var exec = Executors.newVirtualThreadPerTaskExecutor()) {
+    List<Future<Response>> futures = requests.stream()
+        .map(req -> exec.submit(() -> httpClient.send(req)))
+        .toList();
+}
+// Почему: каждый virtual thread unmounts при I/O → N virtual threads на M carrier threads
+// Нет смысла в пуле - создание/уничтожение virtual thread бесплатно (~µs)
+
+// CPU-bound: фиксированный пул platform threads = N ядер
+ExecutorService cpuPool = Executors.newFixedThreadPool(
+    Runtime.getRuntime().availableProcessors()
+);
+// Почему: virtual threads не дают выигрыша для CPU-bound
+// Больше потоков чем ядер = context switching overhead
+
+// Mixed (I/O + CPU): раздельные пулы
+ExecutorService ioPool = Executors.newVirtualThreadPerTaskExecutor();
+ExecutorService cpuPool = Executors.newFixedThreadPool(nCores);
+
+CompletableFuture.supplyAsync(() -> fetchData(url), ioPool)  // I/O: virtual
+    .thenApplyAsync(data -> process(data), cpuPool);         // CPU: platform
+```
+
+---
+
 ## 19. Заключение
 
 Пулы потоков — мощный инструмент для управления многопоточными задачами. `ExecutorService`, `ScheduledExecutorService`, `CompletableFuture`, и `ForkJoinPool` обеспечивают гибкость и производительность. Основанные на AQS, они используют атомарные операции и `LockSupport` для потокобезопасности. Поддержка виртуальных потоков (Java 21+) делает их ещё эффективнее. Следование лучшим практикам минимизирует риски переполнения очередей и неправильного завершения.

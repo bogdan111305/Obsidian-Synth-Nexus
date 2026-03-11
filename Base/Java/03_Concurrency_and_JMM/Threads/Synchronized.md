@@ -100,18 +100,104 @@ istore_1
 monitorexit
 ```
 
-## 4. JVM-реализация и оптимизации
+## 4. JVM-реализация: Object Header и Lock Inflation
 
-- **Инструкции JVM**:
-    - `monitorenter`: Захват монитора.
-    - `monitorexit`: Освобождение монитора.
-- **Типы мониторов**:
-    - **Fat monitor (heavyweight lock)**: Использует системные примитивы ОС (например, `pthread_mutex` на Linux). Затратен при конкуренции.
-    - **Lightweight lock**: Применяет CAS (Compare-And-Swap) для захвата монитора без обращения к ОС, если конкуренция низкая.
-    - **Biased lock** (устарел): Оптимизация для одного потока. Помечен deprecated в Java 15 (JEP 374), отключён по умолчанию в Java 17, **удалён в Java 21**.
-- **JMM (Java Memory Model)**:
-    - `synchronized` устанавливает барьеры памяти (`store` при входе, `load` при выходе).
-    - Гарантирует видимость изменений для всех потоков, захватывающих тот же монитор.
+### Mark Word — сердце механизма блокировки
+
+> [!INFO] Senior: каждый объект в Java содержит Object Header (12–16 байт). Первые 8 байт — **Mark Word** — хранят текущее состояние блокировки.
+
+```
+Mark Word (64-bit JVM, 8 байт) в зависимости от состояния объекта:
+
+[ Unlocked (normal) ]
+| hashcode (31 bit) | age (4) | 0 | 01 |
+
+[ Thin Lock (lightweight lock) ]
+| ptr to lock record in thread stack (62 bit) | 00 |
+
+[ Heavy Lock (fat lock / inflated) ]
+| ptr to ObjectMonitor (62 bit)               | 10 |
+
+[ Marked for GC ]
+| forwarding address                           | 11 |
+
+Последние 2-3 бита = тег состояния:
+01 = unlocked
+00 = thin lock (lightweight)
+10 = fat lock (inflated / heavyweight)
+11 = marked by GC
+```
+
+### Lock Inflation — процесс эскалации блокировки
+
+```
+Состояния монитора (Java 21+, без biased locks):
+
+1. UNLOCKED (01)
+   └─ Первый поток пытается захватить:
+      → CAS: Mark Word [hashcode|01] → [ptr to LockRecord|00]
+      → Если CAS успешен: → THIN LOCK
+      → Если CAS провалился (гонка): → inflate → HEAVY LOCK
+
+2. THIN LOCK (00) — Lock Record в стеке захватившего потока
+   └─ LockRecord: {displaced Mark Word, owner}
+   └─ Если второй поток пытается захватить:
+      → adaptive spin (несколько итераций)
+      → Если spin не помогает: inflate → HEAVY LOCK
+
+3. HEAVY LOCK (10) — ObjectMonitor в Heap
+   └─ ObjectMonitor: {owner, EntryList, WaitSet, count, ...}
+   └─ Конкурирующие потоки → EntryList → Thread.State.BLOCKED
+   └─ wait() → перемещает поток в WaitSet → Thread.State.WAITING
+   └─ notify() → перемещает из WaitSet → EntryList
+
+DEFLATION (Java 18+): Если ObjectMonitor пустой и нет waiters →
+JVM асинхронно возвращает объект в unlocked состояние.
+```
+
+```java
+// Диагностика состояния монитора:
+// jstack <pid> → покажет locked/waiting monitors:
+// "Thread-0" ... State: BLOCKED (on object monitor)
+//   - waiting to lock <0x00000000d0a3f130> (a Counter)
+//   - locked by "Thread-1" ...
+
+// JVM флаг для verbose мониторов:
+// -Xlog:monitorinflation*=debug
+
+// Увидеть hashCode и его влияние на Mark Word:
+Object obj = new Object();
+// Mark Word сейчас: [0 | 01] — нет hashCode, нет блокировки
+int hash = System.identityHashCode(obj);
+// Mark Word сейчас: [hashcode | 01] — hashCode ВПИСАН в Mark Word!
+// После этого thin lock НЕВОЗМОЖЕН для этого объекта
+// (нет места хранить displaced header) → сразу inflate в heavy lock!
+// ЛОВУШКА: вызов hashCode() на объекте-мониторе перед синхронизацией
+//          может привести к дополнительным allocations ObjectMonitor
+```
+
+### Biased Locking — история и удаление
+
+| Версия Java | Статус |
+|-------------|--------|
+| Java 1.6 — 14 | По умолчанию включён |
+| Java 15 (JEP 374) | Deprecated |
+| Java 17 | Отключён по умолчанию |
+| **Java 21** | **Полностью удалён** |
+
+> [!WARNING] Почему удалили biased locking?
+> Biased locks требовали **stop-the-world revocation** при первой попытке другого потока захватить монитор. В современных приложениях с пулами потоков biased locking чаще вредил (частые revocations = STW паузы), чем помогал. Удаление упростило JVM код и устранило неожиданные паузы GC.
+
+### JMM гарантии synchronized
+
+- При **входе** в `synchronized`: LoadLoad + LoadStore барьеры (сброс локального кэша)
+- При **выходе** из `synchronized`: StoreStore + StoreLoad барьеры (flush в основную память)
+- Правило happens-before: `unlock` HB перед следующим `lock` того же монитора → все изменения видны
+
+### Байт-код инструкции
+
+- `monitorenter`: Захват монитора.
+- `monitorexit`: Освобождение монитора (2 выхода в байт-коде: нормальный + исключение → гарантия unlock).
 
 ## 5. Взаимное исключение и видимость
 
