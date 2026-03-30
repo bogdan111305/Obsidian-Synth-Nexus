@@ -1,108 +1,58 @@
----
-title: "Java ClassLoaders — иерархия, делегирование, кастомные загрузчики"
-tags: [java, classloader, jvm, jpms, metaspace]
-updated: 2026-03-04
----
-
 # ClassLoaders в Java
 
-> [!QUOTE] Суть
-> **ClassLoader** — загружает `.class` в JVM. Иерархия: Bootstrap → Platform → Application → Custom. Принцип **делегирования**: сначала спрашивает родителя, только потом ищет сам. Класс идентифицируется по `(ClassLoader, packageName, className)` — один класс, загруженный разными CL, несовместимы!
+> **ClassLoader** — загружает `.class` в JVM. Иерархия: Bootstrap → Platform → Application → Custom. Принцип **делегирования**: сначала спрашивает родителя, только потом ищет сам. Класс идентифицируется по `(ClassLoader, packageName, className)` — один класс, загруженный разными CL, несовместим!
+> На интервью: delegation model, child-first vs parent-first, ClassLoader leaks в Metaspace, NoClassDefFoundError vs ClassNotFoundException, TCCL.
 
-> [!WARNING] Ловушка: ClassCastException между разными ClassLoader
-> Если класс `Foo` загружен двумя разными ClassLoader, то `(Foo) fooFromOtherCL` → `ClassCastException`, даже если это один и тот же `.class` файл. Это частая проблема в OSGi, веб-контейнерах (Tomcat), плагинных системах.
+## Связанные темы
+[[Java Memory Structure]], [[Java Reflection API]], [[Java Assembling]]
 
-## 1. Иерархия ClassLoader
+---
+
+## Иерархия ClassLoader
 
 ```
-Bootstrap ClassLoader  (C++, не Java-объект)
+Bootstrap ClassLoader  (C++, не Java-объект, загружает java.base)
         ↑ parent
-Platform ClassLoader   (Java 9+; Extension ClassLoader в Java 8)
+Platform ClassLoader   (Java 9+; Extension CL в Java 8, загружает java.sql, java.xml...)
         ↑ parent
-Application ClassLoader (System ClassLoader)
+Application ClassLoader (System CL, загружает classpath/modulepath)
         ↑ parent
-Custom ClassLoader      (реализуется разработчиком)
+Custom ClassLoader      (плагины, hot-reload, загрузка из сети/БД)
 ```
-
-### 1.1. Bootstrap ClassLoader
-
-- Реализован на **C++**, встроен в JVM — не является Java-объектом
-- Загружает **ядро JDK**: `java.lang`, `java.util`, `java.io` и другие классы из `java.base` модуля
-- В Java 8: загружает `rt.jar`; в Java 9+: загружает bootstrap module (через internal URL)
-- `String.class.getClassLoader()` возвращает **`null`** — это индикатор Bootstrap CL
 
 ```java
-System.out.println(String.class.getClassLoader());      // null (Bootstrap)
-System.out.println(ArrayList.class.getClassLoader());   // null (Bootstrap)
+System.out.println(String.class.getClassLoader());      // null = Bootstrap CL
+System.out.println(ArrayList.class.getClassLoader());   // null = Bootstrap CL
+ClassLoader appCL = ClassLoader.getSystemClassLoader(); // "app"
+ClassLoader platCL = ClassLoader.getPlatformClassLoader(); // "platform"
 ```
 
-### 1.2. Platform ClassLoader (Java 9+)
+`null` — соглашение JVM для Bootstrap CL: он реализован на C++ и не является Java-объектом.
 
-- В Java 8 назывался **Extension ClassLoader** — загружал `jre/lib/ext/*.jar`
-- В Java 9+ загружает **Platform модули**: `java.sql`, `java.xml`, `java.logging` и др.
-- Родитель — Bootstrap ClassLoader
-- `ClassLoader.getPlatformClassLoader()` — получить экземпляр
+---
+
+## Delegation Model (Parent-First)
+
+```
+loadClass("com.example.MyClass"):
+  1. Проверить кэш (findLoadedClass)
+  2. Делегировать родителю (рекурсивно до Bootstrap)
+  3. Если никто не нашёл → findClass() в текущем CL
+  4. ClassNotFoundException
+```
 
 ```java
-ClassLoader platform = ClassLoader.getPlatformClassLoader();
-System.out.println(platform.getName()); // "platform"
-```
-
-### 1.3. Application ClassLoader (System ClassLoader)
-
-- Загружает классы из **classpath** (или modulepath в JPMS)
-- Родитель — Platform ClassLoader
-- Получить: `ClassLoader.getSystemClassLoader()` или `Thread.currentThread().getContextClassLoader()`
-
-```java
-ClassLoader appCL = ClassLoader.getSystemClassLoader();
-System.out.println(appCL.getName()); // "app"
-
-// Загрузить свой класс:
-Class<?> cls = appCL.loadClass("com.example.MyClass");
-```
-
-### 1.4. Custom ClassLoader
-
-- Создаётся разработчиком для реализации особой логики загрузки
-- Примеры: плагинные системы (OSGi, IntelliJ Platform), горячая перезагрузка, загрузка из сети/БД
-
-## 2. Delegation Model (Parent-First)
-
-**Принцип работы**: перед загрузкой класса CL сначала делегирует запрос **родителю**.
-
-```
-1. AppCL.loadClass("com.example.MyClass")
-2.   → Platform CL (parent). Найден? → вернуть
-3.   → Bootstrap CL (parent родителя). Найден? → вернуть
-4. Если Bootstrap не нашёл → Platform пробует найти
-5. Если Platform не нашёл → App CL пробует найти
-6. Если никто не нашёл → ClassNotFoundException
-```
-
-**Алгоритм `ClassLoader.loadClass()`**:
-
-```java
-protected Class<?> loadClass(String name, boolean resolve)
-        throws ClassNotFoundException {
+// Алгоритм loadClass() (исходник OpenJDK):
+protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
     synchronized (getClassLoadingLock(name)) {
-        // 1. Проверить кэш (уже загружен?)
-        Class<?> c = findLoadedClass(name);
+        Class<?> c = findLoadedClass(name);           // 1. кэш
         if (c == null) {
             try {
-                // 2. Делегировать родителю
-                if (parent != null) {
-                    c = parent.loadClass(name, false);
-                } else {
-                    c = findBootstrapClassOrNull(name); // Bootstrap CL
-                }
-            } catch (ClassNotFoundException e) {
-                // родитель не нашёл — продолжаем
-            }
-            if (c == null) {
-                // 3. Искать самостоятельно
-                c = findClass(name);
-            }
+                c = parent != null
+                    ? parent.loadClass(name, false)   // 2. делегация
+                    : findBootstrapClassOrNull(name);
+            } catch (ClassNotFoundException ignored) {}
+            if (c == null) c = findClass(name);       // 3. искать самому
         }
         if (resolve) resolveClass(c);
         return c;
@@ -110,42 +60,39 @@ protected Class<?> loadClass(String name, boolean resolve)
 }
 ```
 
-**Зачем нужна делегация?**
-- **Безопасность**: нельзя подменить `java.lang.String` своей реализацией — Bootstrap всегда загружает её первым
-- **Консистентность**: один класс = один `Class` объект в рамках одного CL
-- **Изоляция**: разные ClassLoader могут загружать одноимённые классы независимо
+**Зачем нужна делегация:**
+- **Безопасность** — нельзя подменить `java.lang.String` своей реализацией
+- **Консистентность** — один класс = один `Class` объект в рамках одного CL
+- **Изоляция** — разные CL могут загружать одноимённые классы независимо
 
-## 3. ClassLoader API
+---
 
-### Ключевые методы
+## ClassLoader API
 
-|Метод|Описание|
+| Метод | Описание |
 |---|---|
-|`loadClass(String name)`|Загружает класс по имени (с делегацией)|
-|`findClass(String name)`|Ищет класс **только в этом CL** (без делегации)|
-|`defineClass(byte[] b, ...)`|Создаёт `Class` из массива байт (bytecode)|
-|`findLoadedClass(String name)`|Проверяет, уже ли загружен класс|
-|`getResource(String name)`|Ищет ресурс в classpath/modulepath|
-|`getParent()`|Возвращает родительский CL|
+| `loadClass(String)` | Загружает с делегацией (переопределять не рекомендуется) |
+| `findClass(String)` | Ищет только в этом CL (точка расширения) |
+| `defineClass(byte[])` | Создаёт `Class` из байт-кода |
+| `findLoadedClass(String)` | Проверить кэш |
+| `getParent()` | Родительский CL |
 
-### Правило переопределения
-
-**Переопределяйте `findClass()`, а не `loadClass()`** — так сохраняется делегация:
+**Переопределяй `findClass()`, не `loadClass()`** — сохраняется delegation model:
 
 ```java
-public class UrlClassLoaderExample extends ClassLoader {
+public class FileClassLoader extends ClassLoader {
     private final Path classDir;
 
-    public UrlClassLoaderExample(Path classDir, ClassLoader parent) {
+    public FileClassLoader(Path classDir, ClassLoader parent) {
         super(parent);
         this.classDir = classDir;
     }
 
     @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException {
-        String path = name.replace('.', '/') + ".class";
+        Path path = classDir.resolve(name.replace('.', '/') + ".class");
         try {
-            byte[] bytes = Files.readAllBytes(classDir.resolve(path));
+            byte[] bytes = Files.readAllBytes(path);
             return defineClass(name, bytes, 0, bytes.length);
         } catch (IOException e) {
             throw new ClassNotFoundException(name, e);
@@ -154,25 +101,24 @@ public class UrlClassLoaderExample extends ClassLoader {
 }
 ```
 
-## 4. Кастомный ClassLoader: пример плагинной системы
+---
+
+## Кастомный ClassLoader: плагинная система
 
 ```java
 public class PluginLoader extends ClassLoader {
     private final Path pluginJar;
 
     public PluginLoader(Path pluginJar) {
-        // parent = System ClassLoader (делегация для JDK/app классов)
-        super(ClassLoader.getSystemClassLoader());
+        super(ClassLoader.getSystemClassLoader()); // делегация для JDK/app классов
         this.pluginJar = pluginJar;
     }
 
     @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException {
         try (JarFile jar = new JarFile(pluginJar.toFile())) {
-            String entryName = name.replace('.', '/') + ".class";
-            JarEntry entry = jar.getJarEntry(entryName);
+            JarEntry entry = jar.getJarEntry(name.replace('.', '/') + ".class");
             if (entry == null) throw new ClassNotFoundException(name);
-
             byte[] bytes = jar.getInputStream(entry).readAllBytes();
             return defineClass(name, bytes, 0, bytes.length);
         } catch (IOException e) {
@@ -181,88 +127,52 @@ public class PluginLoader extends ClassLoader {
     }
 }
 
-// Использование:
-ClassLoader pluginCL = new PluginLoader(Path.of("plugin.jar"));
-Class<?> pluginClass = pluginCL.loadClass("com.plugin.MyPlugin");
-Object instance = pluginClass.getDeclaredConstructor().newInstance();
+// Hot-reload: новый CL = новая версия класса
+ClassLoader pluginCL = new PluginLoader(Path.of("plugin-v2.jar"));
+Class<?> cls = pluginCL.loadClass("com.plugin.MyPlugin");
+Object instance = cls.getDeclaredConstructor().newInstance();
+// Убрать ссылки на старый CL → GC выгрузит его классы из Metaspace
 ```
 
-**Горячая перезагрузка**: для перезагрузки класса нужно создать **новый** `ClassLoader` — старый класс выгрузится, когда станет недостижимым его ClassLoader.
+---
 
-## 5. Связь с JPMS (Java 9+ Module System)
+## Когда классы выгружаются (Metaspace leaks)
 
-В Java 9+ Module System (Project Jigsaw) изменила иерархию CL:
-
-```
-Bootstrap CL     → загружает java.base module (core)
-Platform CL      → загружает platform modules (java.sql, java.xml, ...)
-Application CL   → загружает app module (classpath / modulepath)
-```
-
-**Ключевые изменения:**
-- `Extension ClassLoader` → `Platform ClassLoader`
-- `rt.jar`, `tools.jar` убраны — заменены модульной структурой
-- ClassLoader.loadClass() работает по-прежнему, но с учётом модульных границ
-- `--add-opens`, `--add-exports` для доступа к непубличным модульным API
-
-```java
-// Получить модуль класса:
-Module module = String.class.getModule();
-System.out.println(module.getName()); // "java.base"
-System.out.println(module.isNamed()); // true
-```
-
-## 6. Когда классы выгружаются
-
-Класс **выгружается из Metaspace** только когда:
-1. Его `ClassLoader` объект стал **недостижимым** для GC
-2. Все классы, загруженные этим CL, стали недостижимыми
+Класс выгружается из Metaspace только когда:
+1. `ClassLoader` объект стал **недостижимым** для GC
+2. Все загруженные им классы стали недостижимыми
 3. Все `Class` объекты этих классов стали недостижимыми
 
-```
-ClassLoader → [Class A, Class B, Class C]
-                  ↑
-           если ClassLoader недостижим →
-           GC выгружает все его классы из Metaspace
-```
+**ClassLoader leaks** — частая проблема при hot-deploy в контейнерах:
+- Старый CL держится через: статические поля JDBC driver, ThreadLocal, shutdown hook, log4j appender
+- Симптом: `OutOfMemoryError: Metaspace` при каждом redeploy
+- Диагностика: `jmap -histo <pid>` → ищи множество `ClassLoader` экземпляров; JFR `jdk.ClassLoaderStatistics`
 
-**Практически**: это происходит в OSGi, контейнерах приложений (Tomcat), hot-deploy. Стандартный App ClassLoader никогда не выгружается — его классы живут до завершения JVM.
+---
 
-**ClassLoader leaks** (утечки памяти в Metaspace):
-- Происходят когда кастомный CL стал "outdated", но на него есть ссылки из ThreadLocal, static поля, JDBC drivers, логирование (log4j)
-- Симптом: `OutOfMemoryError: Metaspace` при hot-deploy
-- Диагностика: `jmap -histo <pid>` → поиск `ClassLoader` объектов; JFR `jdk.ClassLoaderStatistics`
+## NoClassDefFoundError vs ClassNotFoundException
 
-## 7. NoClassDefFoundError vs ClassNotFoundException
-
-|Ошибка|Когда возникает|Причина|
+| Ошибка | Когда | Причина |
 |---|---|---|
-|`ClassNotFoundException`|`Class.forName()`, `loadClass()` — явная загрузка|Класс не найден в classpath/modulepath|
-|`NoClassDefFoundError`|JVM пытается загрузить класс, нужный для другого класса|Класс был в compile-time, но отсутствует в runtime|
+| `ClassNotFoundException` | `Class.forName()`, `loadClass()` — явная загрузка | Не найден в classpath |
+| `NoClassDefFoundError` | JVM загружает класс нужный для другого | Был в compile-time, отсутствует в runtime |
 
 ```java
-// ClassNotFoundException — контролируемая:
 try {
-    Class<?> cls = Class.forName("com.example.Missing");
-} catch (ClassNotFoundException e) {
-    // обрабатываем
-}
+    Class<?> cls = Class.forName("com.example.Missing"); // ClassNotFoundException
+} catch (ClassNotFoundException e) { ... }
 
-// NoClassDefFoundError — неконтролируемая Error:
-// class A { B b = new B(); }  — если B.class отсутствует в runtime
-// → java.lang.NoClassDefFoundError: com/example/B
+// NoClassDefFoundError — не поймаешь через catch ClassNotFoundException:
+// class A { B b = new B(); } // если B.class отсутствует в runtime → NCDFE
 ```
 
-**Типичный сценарий `NoClassDefFoundError`:**
-- Класс успешно скомпилирован (зависимость есть в compile classpath)
-- В runtime зависимость отсутствует (war/jar без нужной библиотеки)
-- Или: класс был загружен, но его статический инициализатор бросил исключение → класс помечается как "failed" → повторная загрузка даёт `NoClassDefFoundError`
+**Ещё причина NCDFE:** класс был загружен, но его static инициализатор бросил исключение → класс помечается "failed" → повторная попытка загрузки → `NoClassDefFoundError`.
 
-## 8. Thread Context ClassLoader
+---
 
-Проблема: библиотеки (JNDI, JDBC, SPI) загружаются Bootstrap или Platform CL, но им нужно загружать классы из Application classpath (драйверы, провайдеры).
+## Thread Context ClassLoader
 
-**Решение — Thread Context ClassLoader:**
+Проблема: Bootstrap/Platform CL загружает библиотеки (JDBC, JNDI, SPI), но им нужны классы из Application classpath (драйверы, провайдеры).
 
 ```java
 // По умолчанию = System ClassLoader
@@ -271,39 +181,53 @@ ClassLoader tccl = Thread.currentThread().getContextClassLoader();
 // Библиотека использует TCCL вместо своего CL:
 Class<?> driver = tccl.loadClass("com.mysql.cj.jdbc.Driver");
 
-// Смена TCCL (например, в контейнерах приложений):
+// Замена TCCL в контейнерах приложений:
+ClassLoader original = Thread.currentThread().getContextClassLoader();
 Thread.currentThread().setContextClassLoader(webAppClassLoader);
 try {
-    // выполнение кода с контекстом веб-приложения
+    // код выполняется с CL веб-приложения
 } finally {
-    Thread.currentThread().setContextClassLoader(originalCL);
+    Thread.currentThread().setContextClassLoader(original); // обязателен restore
 }
 ```
 
-## Interview Q&A (Senior Level)
+---
 
-**Q1: Почему `String.class.getClassLoader()` возвращает `null`, а не объект ClassLoader?**
+## JPMS (Java 9+)
 
-> `null` — это соглашение JVM для обозначения **Bootstrap ClassLoader**. Bootstrap CL реализован на C++ как часть JVM и не представлен Java-объектом. `Class.getClassLoader()` возвращает `null` для любого класса, загруженного Bootstrap CL (все классы `java.lang`, `java.util`, и т.д.). При написании кода, работающего с ClassLoader, всегда проверяйте: `cl != null ? cl : ClassLoader.getSystemClassLoader()`.
+```
+Bootstrap CL  → java.base module (core JDK)
+Platform CL   → platform modules (java.sql, java.xml, java.logging...)
+Application CL → app module (classpath / modulepath)
+```
 
-**Q2: Чем отличается переопределение `loadClass()` от переопределения `findClass()`? Что предпочтительнее?**
+`Extension ClassLoader` переименован в `Platform ClassLoader`. `rt.jar`/`tools.jar` убраны. `ClassLoader.loadClass()` работает по-прежнему, но с учётом модульных границ.
 
-> `loadClass()` реализует весь алгоритм: проверка кэша → делегация родителю → `findClass()`. Переопределение `loadClass()` ломает delegation model — можно случайно загрузить `java.lang.String` собственным кодом (угроза безопасности). `findClass()` — точка расширения: вызывается только когда родители не нашли класс. Переопределяйте **всегда `findClass()`**. Исключение: OSGi и подобные системы сознательно переопределяют `loadClass()` для реализации child-first delegation.
+```java
+Module module = String.class.getModule();
+System.out.println(module.getName()); // "java.base"
+```
 
-**Q3: Как ClassLoader связан с утечками памяти в Metaspace при hot-deploy?**
+---
 
-> Метаданные класса живут в Metaspace пока жив его ClassLoader. При hot-deploy создаётся новый CL с новыми классами. Если старый CL остаётся достижимым (например, через статическое поле драйвера JDBC, ThreadLocal, или shutdown hook), GC не может выгрузить его классы из Metaspace. При каждом redeploy добавляются новые классы → Metaspace заполняется → `OutOfMemoryError: Metaspace`. Диагностика: `jmap -histo <pid>` → ищем множество экземпляров ClassLoader. Решение: явно обнулять статические ссылки, отменять регистрацию драйверов, очищать ThreadLocal.
+## Вопросы на интервью
 
-**Q4: Что такое "child-first" ClassLoader и зачем он нужен в контейнерах приложений?**
+- Почему `String.class.getClassLoader()` возвращает `null`?
+- Почему нужно переопределять `findClass()`, а не `loadClass()`?
+- Что такое child-first ClassLoader? Зачем он нужен в Tomcat?
+- Как ClassLoader связан с утечками памяти в Metaspace при hot-deploy?
+- Чем `ClassNotFoundException` отличается от `NoClassDefFoundError`?
+- Что такое Thread Context ClassLoader? Почему он нужен для JDBC?
+- Можно ли перезагрузить класс без перезапуска JVM? Как?
+- Почему объекты одного класса, загруженного разными CL, несовместимы по типу?
 
-> Стандартная delegation model — "parent-first": родительский CL имеет приоритет. Контейнеры (Tomcat, JBoss) реализуют "child-first" (WebApp CL) для **изоляции веб-приложений**: сначала ищем класс в WAR, только если не нашли — делегируем родителю. Это позволяет разным приложениям использовать разные версии одной библиотеки (например, Hibernate 5 и Hibernate 6 одновременно). Без child-first: первая загруженная версия библиотеки "выигрывает" для всех приложений в контейнере.
+---
 
-**Q5: Можно ли перезагрузить класс в runtime без перезапуска JVM? Как?**
+## Подводные камни
 
-> Да, через новый ClassLoader. `ClassLoader` кэширует загруженные классы (`findLoadedClass`), поэтому один CL не может загрузить один класс дважды. Алгоритм hot-reload: (1) создать новый `PluginClassLoader`; (2) загрузить обновлённый `MyClass` через `defineClass(newBytecode)`; (3) создать экземпляр нового класса; (4) убрать ссылки на старый CL → GC выгружает старый класс из Metaspace. Проблема: объекты старого и нового классов несовместимы по типу — нужен общий интерфейс, загружаемый через App CL.
-
-## Связанные темы
-
-- [[Java Memory Structure]] — Metaspace и выгрузка классов
-- [[Java Reflection API]] — работа с ClassLoader через рефлексию
-- [[Java Assembling]] — classpath, modulepath, jar, JPMS
+- **ClassCastException между разными CL** — `(Foo) fooFromOtherCL` → `ClassCastException` даже если тот же `.class` файл. Используй общий интерфейс, загружаемый через App CL.
+- **Переопределение `loadClass()`** — ломает delegation model. Только OSGi/системные плагины делают это сознательно. Обычный код → `findClass()`.
+- **Статический инициализатор + NCDFE** — если `static {}` блок бросил исключение, класс помечается "failed initialization" навсегда. Повторный `Class.forName()` → `NoClassDefFoundError`, не `ClassNotFoundException`.
+- **TCCL без restore** — `setContextClassLoader()` без `finally { restore }` = следующий код в потоке получает "чужой" CL. Томкат уже видел это как источник загрузки классов из неправильного webapp.
+- **CL leak через ThreadLocal** — если `ThreadLocal` хранит объект класса, загруженного кастомным CL, и поток из пула пережил redeploy, кастомный CL не будет собран GC. Очищай ThreadLocal при завершении задач.
+- **Bootstrap CL = null checks** — код `cl.getParent()` упадёт с NPE для Bootstrap. Всегда: `ClassLoader parent = cl.getParent(); if (parent == null) parent = ClassLoader.getSystemClassLoader();`
