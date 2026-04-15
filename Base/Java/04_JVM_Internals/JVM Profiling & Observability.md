@@ -1,491 +1,235 @@
----
-title: "JVM Profiling & Observability"
-tags: [java, jvm, profiling, jfr, async-profiler, heap-dump, observability, performance]
-updated: 2026-03-10
----
-
 # JVM Profiling & Observability
 
-> [!QUOTE] Суть
-> Инструменты профилирования: **JFR** (Java Flight Recorder, low-overhead, production-safe), **async-profiler** (CPU/alloc/lock, wall-clock), **jstack** (thread dump), **jmap** (heap dump), **VisualVM/JConsole** (GUI). Diagnose: CPU-bound → CPU sampling, Memory leak → heap dump + MAT.
+> Инструменты: **JFR** (Java Flight Recorder, < 1% overhead, production-safe), **async-profiler** (CPU/alloc/lock, нет SafePoint bias), **jcmd** (Swiss Army Knife), **jstack/jmap** (threads/heap dump), **MAT** (heap analysis).
+> На интервью: SafePoint bias и почему JVMTI профилировщики ненадёжны, JFR Streaming API, Retained vs Shallow Size в MAT, как диагностировать memory leak.
 
-## 1. Слои наблюдаемости JVM
-
-```mermaid
-flowchart TB
-    subgraph APP["Уровень приложения"]
-        METRICS["Micrometer / Prometheus\nBusiness метрики"]
-        TRACES["Jaeger / Zipkin\nDistributed Tracing"]
-    end
-
-    subgraph JVM["Уровень JVM"]
-        JFR["Java Flight Recorder\nНизкоуровневые события JVM"]
-        ASYNC["async-profiler\nCPU / Alloc / Wall-clock / Lock"]
-        JMX["JMX / MBeans\nHeap, GC, Threads, ClassLoading"]
-    end
-
-    subgraph OS["Уровень ОС"]
-        PERF["perf / eBPF\nSyscalls, context switches"]
-        VMSTAT["vmstat / iostat\nMemory, I/O"]
-    end
-
-    APP --> JVM --> OS
-
-    style JFR fill:#2d6a4f,color:#fff
-    style ASYNC fill:#1d3557,color:#fff
-```
+## Связанные темы
+[[JIT Compiler & Optimizations]], [[Java Agents & Instrumentation API]], [[Java Memory Structure]]
 
 ---
 
-## 2. Java Flight Recorder (JFR)
+## Java Flight Recorder (JFR)
 
-JFR — встроенный в JVM профилировщик с **< 1% overhead**. Production-safe.
-
-### 2.1. Запуск JFR
+Встроенный профилировщик с < 1% overhead. Production-safe. Работает через ring buffer в памяти JVM.
 
 ```bash
-# Способ 1: При старте JVM (запись в файл)
-java -XX:+FlightRecorder \
-     -XX:StartFlightRecording=duration=60s,filename=app.jfr \
-     -jar myapp.jar
+# При старте:
+java -XX:StartFlightRecording=duration=60s,filename=app.jfr -jar myapp.jar
 
-# Способ 2: jcmd к работающей JVM
+# К работающей JVM:
 jcmd <pid> JFR.start duration=120s filename=/tmp/app.jfr name=MyRec
-
-# Остановить и сохранить:
 jcmd <pid> JFR.stop name=MyRec
-
-# Дамп без остановки (для streaming):
-jcmd <pid> JFR.dump name=MyRec filename=/tmp/snapshot.jfr
-
-# Просмотр активных записей:
+jcmd <pid> JFR.dump name=MyRec filename=/tmp/snapshot.jfr  # без остановки
 jcmd <pid> JFR.check
 ```
 
-### 2.2. Анализ через JFR Streaming API (Java 14+)
+**Ключевые JFR события:**
 
+| Категория | Событие | Что показывает |
+|---|---|---|
+| GC | `jdk.GCPhasePause` | Длительность GC пауз |
+| GC | `jdk.GarbageCollection` | Тип GC, до/после heap |
+| Memory | `jdk.ObjectAllocationInNewTLAB` | Аллокации (sampling) |
+| IO | `jdk.SocketRead/Write` | Сетевые операции |
+| Thread | `jdk.MonitorWait` | Ожидание на мониторе |
+| JIT | `jdk.Compilation` | JIT компиляции |
+| VT | `jdk.VirtualThreadPinned` | Pinning virtual threads |
+
+**JFR Streaming API (Java 14+) — real-time без файла:**
 ```java
-import jdk.jfr.consumer.*;
-
-// Стриминг событий JFR в реальном времени:
-try (var stream = RecordingStream.ofConfiguration(
-        Configuration.getConfiguration("profile"))) {
-
-    // CPU события:
-    stream.onEvent("jdk.CPUSample", event -> {
-        System.out.println("CPU: " + event.getDouble("systemCpuLoad"));
-    });
-
-    // GC паузы:
+try (var stream = RecordingStream.ofConfiguration(Configuration.getConfiguration("profile"))) {
     stream.onEvent("jdk.GCPhasePause", event -> {
-        Duration duration = event.getDuration("duration");
-        if (duration.toMillis() > 100) {
-            System.out.println("Long GC pause: " + duration);
-        }
+        if (event.getDuration("duration").toMillis() > 100)
+            alert("Long GC pause: " + event.getDuration("duration"));
     });
 
-    // Аллокации (только sampling, не каждая):
     stream.onEvent("jdk.ObjectAllocationInNewTLAB", event -> {
-        long size = event.getLong("tlabSize");
-        String className = event.getClass("objectClass").getName();
-        System.out.printf("Alloc: %s, size: %d%n", className, size);
+        log("Alloc: %s, size: %d", event.getClass("objectClass").getName(),
+            event.getLong("tlabSize"));
     });
 
-    // Метод, вызвавший аллокацию:
     stream.setReuse(true); // переиспользовать объект события
     stream.start();
 }
 ```
 
-### 2.3. Ключевые JFR события
-
-| Категория | Событие | Что показывает |
-|---|---|---|
-| CPU | `jdk.CPUSample` | Загрузка CPU (system/user) |
-| GC | `jdk.GCPhasePause` | Длительность GC пауз |
-| GC | `jdk.GarbageCollection` | Тип GC, до/после heap |
-| Memory | `jdk.ObjectAllocationInNewTLAB` | Аллокации (sampling) |
-| IO | `jdk.FileRead/Write` | Файловые I/O операции |
-| IO | `jdk.SocketRead/Write` | Сетевые операции |
-| Thread | `jdk.ThreadSleep` | Sleeping потоки |
-| Thread | `jdk.MonitorWait` | Ожидание на мониторе |
-| JIT | `jdk.Compilation` | JIT компиляции |
-| ClassLoad | `jdk.ClassLoad` | Загрузка классов |
-
-### 2.4. Кастомные JFR события
-
+**Кастомные JFR события:**
 ```java
-import jdk.jfr.*;
-
 @Label("User Login")
-@Description("Fired when user successfully authenticates")
 @Category({"Business", "Security"})
-@StackTrace(false) // не записывать stack trace (дешевле)
+@StackTrace(false)  // не записывать stack trace (дешевле)
 public class UserLoginEvent extends Event {
-    @Label("User ID")
-    public long userId;
-
-    @Label("Auth Method")
-    public String authMethod;
-
-    @Label("Duration")
-    @Timespan(Timespan.MILLISECONDS)
-    public long durationMs;
+    @Label("User ID") public long userId;
+    @Label("Auth Method") public String authMethod;
 }
 
 // Использование:
 UserLoginEvent event = new UserLoginEvent();
-event.begin(); // старт таймера
+event.begin();
 try {
-    // ... логика аутентификации
     event.userId = user.getId();
     event.authMethod = "JWT";
 } finally {
     event.end();
-    event.commit(); // записать в JFR буфер
+    event.commit(); // записать в буфер
 }
 ```
 
 ---
 
-## 3. async-profiler
+## async-profiler
 
-async-profiler — **не-SafePoint** профилировщик с минимальным overhead. Единственный правильный CPU профилировщик для JVM.
+**Не-SafePoint** профилировщик. Единственный корректный CPU профилировщик для JVM.
 
-### 3.1. Почему async-profiler, а не JVMTI CPU Sampling?
-
+**Почему async-profiler, а не JVMTI:**
 ```
-Традиционный JVMTI sampling:
-  → Останавливает поток только в SafePoint
-  → SafePoint Bias: показывает горячие места ~SafePoint кода
-  → НЕ показывает горячие spin-loops (они редко в SafePoint)
-  → Даёт ЛОЖНУЮ картину!
+JVMTI sampling: останавливает поток только в SafePoint
+  → SafePoint Bias: показывает код около goto/back-edge
+  → НЕ видит tight spin-loops (они вне SafePoint)
+  → Ложная картина!
 
-async-profiler (AsyncGetCallTrace):
-  → Прерывает поток в ЛЮБОЙ момент через OS сигналы (SIGPROF)
-  → Честный стек трейс без SafePoint bias
-  → Видит нативный код и JIT-скомпилированный код
+async-profiler: прерывает через OS сигналы (SIGPROF)
+  → Честный стек трейс в ЛЮБОЙ момент
+  → Видит нативный код и JIT-compiled
+  → Реальные горячие места
 ```
-
-### 3.2. Режимы профилирования
 
 ```bash
-# 1. CPU профилирование (по умолчанию):
+# CPU профилирование:
 ./asprof -d 30 -f flamegraph.html <pid>
 
-# 2. Heap allocation профилирование:
+# Heap allocation:
 ./asprof -e alloc -d 30 -f alloc.html <pid>
 
-# 3. Wall-clock (включает блокирующие потоки):
+# Wall-clock (включает IO/блокирующие потоки):
 ./asprof -e wall -d 30 -f wall.html <pid>
-# Полезно: видит IO-ожидание, network latency
 
-# 4. Lock профилирование:
+# Lock профилирование:
 ./asprof -e lock -d 30 -f lock.html <pid>
 
-# 5. Через Java API:
-./asprof -d 60 -f output.jfr <pid>  # сохранить как JFR файл
+# Сохранить как JFR:
+./asprof -d 60 -f output.jfr <pid>
 ```
 
-### 3.3. Flamegraph анализ
-
-```
-Flamegraph читается снизу вверх:
-  - Нижние фреймы = точки входа (main, thread start)
-  - Верхние фреймы = где CPU проводит время
-  - Ширина плато = % CPU времени
-  - "Плоские" широкие верхушки = ГОРЯЧИЕ МЕТОДЫ → оптимизируй их!
-
-Цвета:
-  - Зелёный: Java-код
-  - Оранжевый: C/C++ нативный код
-  - Жёлтый: ядро ОС (kernel)
-  - Красный: JIT-скомпилированный код
-```
-
-```mermaid
-graph TB
-    subgraph "Flamegraph (читать снизу вверх)"
-        A["main()"]
-        B["processRequests()"]
-        C["handleRequest()"]
-        D["deserializeJson()"]
-        E["ObjectMapper.readValue() ← ШИРОКИЙ = горячий!"]
-
-        A --> B --> C --> D --> E
-    end
-```
-
-### 3.4. Async-profiler через Java API
-
-```java
-// Интеграция в приложение:
-import one.profiler.AsyncProfiler;
-
-AsyncProfiler profiler = AsyncProfiler.getInstance();
-
-// Старт CPU профилирования:
-profiler.execute("start,event=cpu,interval=10ms,file=/tmp/profile.jfr");
-
-// ... работа приложения ...
-
-// Стоп и сохранение:
-profiler.execute("stop");
-
-// Или через команды:
-profiler.start(Events.CPU, 10_000_000); // 10ms interval в наносекундах
-Thread.sleep(30_000);
-profiler.stop();
-profiler.dumpFlame("/tmp/flame.html");
-```
+**Flamegraph:** читается снизу вверх. Ширина плато = % CPU. Широкие верхушки = горячие методы.
 
 ---
 
-## 4. Heap Dump анализ
-
-### 4.1. Получение heap dump
+## Heap Dump анализ
 
 ```bash
-# 1. Автоматически при OOM:
-java -XX:+HeapDumpOnOutOfMemoryError \
-     -XX:HeapDumpPath=/tmp/heapdump.hprof \
-     -jar myapp.jar
+# Автоматически при OOM:
+java -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/oom.hprof -jar myapp.jar
 
-# 2. Вручную через jcmd (live=true - только достижимые):
+# Вручную через jcmd:
 jcmd <pid> GC.heap_dump filename=/tmp/live.hprof
 
-# 3. Через jmap (устаревший, но работает):
+# Через jmap:
 jmap -dump:live,format=b,file=/tmp/heap.hprof <pid>
-
-# 4. Через JMX (programmatic):
-com.sun.management.HotSpotDiagnosticMXBean bean =
-    ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
-bean.dumpHeap("/tmp/programmatic.hprof", true);
 ```
 
-### 4.2. Анализ в Eclipse MAT (Memory Analyzer Tool)
-
+**Eclipse MAT — ключевые отчёты:**
 ```
-Ключевые отчёты MAT:
-
-1. Leak Suspects Report:
-   → Автоматически ищет подозрительные накопления объектов
-   → "Problem suspect 1: 892 MB retained by org.example.UserCache"
-
-2. Dominator Tree:
-   → Объекты, удержание которых занимает больше всего памяти
-   → Shallow Size: размер объекта
-   → Retained Size: сколько освободится если удалить объект
-
-3. OQL (Object Query Language):
-   SELECT * FROM java.util.ArrayList a WHERE a.size > 10000
-   → Найти все ArrayList больше 10000 элементов
-
-4. Thread Overview:
-   → Стеки всех потоков в момент dump
-   → Объекты на каждом стеке
-
-5. Histogram:
-   → Топ классов по количеству экземпляров и retained heap
+Leak Suspects Report → автоматически ищет накопления
+Dominator Tree → объекты с наибольшим retained heap
+  Shallow Size = только сам объект (заголовок + поля)
+  Retained Size = сколько освободится если объект удалить → ВАЖНЕЕ!
+OQL → SELECT * FROM java.util.ArrayList a WHERE a.size > 10000
+Thread Overview → стеки всех потоков + объекты на стеке
 ```
 
-### 4.3. Programmatic Heap Analysis (OQL)
-
-```java
-// Анализ через JVMTI API (в агенте):
-// Или использование MAT headless:
-// ./mat/MemoryAnalyzer -consoleLog -nosplash -application \
-//     org.eclipse.mat.api.parse "/tmp/heap.hprof" \
-//     "org.eclipse.mat.api:suspects"
+**Диагностика Memory Leak:**
+```
+1. Симптом: Heap растёт после каждого Full GC
+2. jcmd <pid> GC.heap_dump ...
+3. MAT: Dominator Tree → максимальный retained?
+4. MAT: Path to GC Roots → почему объект жив?
+5. Типичные виновники:
+   - ThreadLocal без remove() в thread pool
+   - static Map/List, которые только растут
+   - Event listeners не отписанные
+   - ClassLoader leaks (Tomcat hot reload, OSGi)
+   - Внутренние кэши сторонних библиотек
 ```
 
 ---
 
-## 5. JVM Metrics (JMX / MBeans)
+## jcmd: Swiss Army Knife
+
+```bash
+jcmd -l                                          # список JVM процессов
+jcmd <pid> help                                  # все команды
+jcmd <pid> GC.heap_info                          # текущее состояние heap
+jcmd <pid> GC.run                                # запустить GC
+jcmd <pid> GC.class_histogram | head -30         # топ объектов
+jcmd <pid> VM.native_memory summary              # native memory (нужен -XX:NativeMemoryTracking=summary)
+jcmd <pid> VM.flags                              # флаги JVM
+jcmd <pid> Thread.print                          # все стеки потоков
+jcmd <pid> VM.class_hierarchy                    # иерархия классов
+jcmd <pid> Compiler.directives_print             # JIT директивы
+```
+
+---
+
+## JVM Metrics (JMX)
 
 ```java
-import java.lang.management.*;
-
-// Heap использование:
+// Heap:
 MemoryMXBean memory = ManagementFactory.getMemoryMXBean();
 MemoryUsage heap = memory.getHeapMemoryUsage();
-System.out.printf("Heap: used=%dMB, max=%dMB%n",
-    heap.getUsed() / 1_000_000, heap.getMax() / 1_000_000);
+// heap.getUsed() / heap.getMax()
 
-// GC статистика:
+// GC:
 for (GarbageCollectorMXBean gc : ManagementFactory.getGarbageCollectorMXBeans()) {
-    System.out.printf("GC %s: count=%d, time=%dms%n",
-        gc.getName(), gc.getCollectionCount(), gc.getCollectionTime());
+    // gc.getName(), gc.getCollectionCount(), gc.getCollectionTime()
 }
 
-// Потоки:
+// Потоки + deadlock detection:
 ThreadMXBean threads = ManagementFactory.getThreadMXBean();
-System.out.printf("Live threads: %d, Peak: %d%n",
-    threads.getThreadCount(), threads.getPeakThreadCount());
-
-// Deadlock detection:
 long[] deadlocked = threads.findDeadlockedThreads();
 if (deadlocked != null) {
     ThreadInfo[] info = threads.getThreadInfo(deadlocked, true, true);
-    // обработка deadlock
+    // log deadlock chain
 }
-
-// CPU время конкретного потока:
-threads.setThreadCpuTimeEnabled(true);
-long cpuTime = threads.getThreadCpuTime(Thread.currentThread().getId());
 ```
+
+**Spring Boot + Micrometer:** автоматически экспортирует `jvm_memory_used_bytes`, `jvm_gc_pause_seconds`, `jvm_threads_live_threads` в Prometheus.
 
 ---
 
-## 6. Диагностика через jcmd (Swiss Army Knife)
+## JFR vs async-profiler
 
-```bash
-# Список всех JVM процессов:
-jcmd -l
-
-# Все команды для процесса:
-jcmd <pid> help
-
-# Heap информация:
-jcmd <pid> GC.heap_info
-
-# Запуск GC:
-jcmd <pid> GC.run
-
-# Native Memory Tracking (нужен -XX:NativeMemoryTracking=summary):
-jcmd <pid> VM.native_memory summary
-
-# Флаги JVM:
-jcmd <pid> VM.flags
-
-# System properties:
-jcmd <pid> VM.system_properties
-
-# Стек всех потоков (аналог jstack):
-jcmd <pid> Thread.print
-
-# Загруженные классы:
-jcmd <pid> VM.class_hierarchy
-
-# Compiler directives:
-jcmd <pid> Compiler.directives_print
-
-# JFR:
-jcmd <pid> JFR.start duration=60s filename=/tmp/rec.jfr
-jcmd <pid> JFR.stop
-
-# Статистика объектов (без Full GC):
-jcmd <pid> GC.class_histogram | head -30
-```
+| | JFR | async-profiler |
+|---|---|---|
+| Overhead в продакшне | < 1% | ~2-5% |
+| SafePoint bias | Минимальный | Нет |
+| Аллокации | Sampling | Sampling + точный |
+| Wall-clock | Нет | Да |
+| Кастомные события | Да | Нет |
+| Долгосрочный мониторинг | Да (ring buffer) | Нет |
+| Требования | Встроен | root/CAP_SYS_ADMIN в контейнере |
+| Применение | Production мониторинг | Целевое исследование |
 
 ---
 
-## 7. Micrometer + Prometheus интеграция
+## Вопросы на интервью
 
-```java
-// Spring Boot Actuator автоматически экспортирует JVM метрики:
-// Dependency: micrometer-registry-prometheus
-
-// Автоматически доступны:
-// jvm_memory_used_bytes{area="heap",id="G1 Eden Space"}
-// jvm_gc_pause_seconds_sum{action="end of major GC",cause="G1 Humongous Allocation"}
-// jvm_threads_live_threads
-// jvm_classes_loaded_classes
-// process_cpu_usage
-
-// Кастомные метрики:
-@Bean
-MeterRegistryCustomizer<MeterRegistry> metricsCommonTags() {
-    return registry -> registry.config()
-        .commonTags("application", "user-service",
-                    "env", "production");
-}
-
-// Таймер для метода:
-@Autowired MeterRegistry registry;
-
-Timer timer = Timer.builder("service.method.duration")
-    .tag("method", "processUser")
-    .description("Time taken to process user")
-    .register(registry);
-
-timer.record(() -> processUser(user));
-
-// Gauge для размера кэша:
-Gauge.builder("cache.size", cache, Cache::size)
-    .tag("name", "userCache")
-    .register(registry);
-```
+- Что такое SafePoint Bias? Почему JVMTI CPU profiling показывает ложную картину?
+- Чем async-profiler отличается от встроенного JFR CPU sampling?
+- Что такое Retained Size? Почему он важнее Shallow Size при анализе утечек?
+- Как JFR Streaming API работает без записи в файл?
+- Как диагностировать memory leak? Какие типичные виновники?
+- Как получить thread dump без jstack? (jcmd Thread.print)
+- Как узнать CPU throttling в k8s через JVM метрики?
+- Зачем нужны кастомные JFR события? Пример использования.
 
 ---
 
-## Senior Insights
+## Подводные камни
 
-### JFR vs async-profiler: когда что использовать
-
-```
-JFR:
-✅ Production (< 1% overhead при default настройках)
-✅ Долгосрочный мониторинг (часы/дни)
-✅ Встроен в JVM, нет зависимостей
-✅ Кастомные бизнес события
-✅ JFR Streaming API (real-time)
-❌ SafePoint bias (хотя меньше чем JVMTI)
-❌ CPU sampling resolution ограничен (10ms default)
-
-async-profiler:
-✅ Нет SafePoint bias → честная картина CPU
-✅ Allocation profiling с call tree
-✅ Wall-clock mode (видит waiting/IO потоки)
-✅ Flamegraph output (HTML)
-✅ Lock profiling
-❌ Требует root или CAP_SYS_ADMIN в контейнере
-❌ Attach к JVM (небольшой риск для production)
-❌ Нет долгосрочного streaming
-```
-
-### Диагностика Memory Leak паттерн
-
-```
-1. Симптом: Heap растёт после каждого Full GC
-2. Получаем heap dump: jcmd <pid> GC.heap_dump ...
-3. MAT: Dominator Tree → что занимает больше всего retained?
-4. MAT: Path to GC Roots → почему этот объект жив?
-5. Типичные виновники:
-   - ThreadLocal без remove() в thread pool
-   - static Map/List которые только растут
-   - Event listeners не отписанные
-   - ClassLoader leaks (в OSGi, Tomcat hot reload)
-   - Внутренние кэши в сторонних библиотеках
-```
-
----
-
-## Senior Interview Q&A
-
-**Q1: Почему SafePoint Bias делает JVMTI CPU profiling ненадёжным?**
-
-> JVMTI sampling останавливает поток для получения стека только в SafePoint-ах — специальных точках в байт-коде где JVM знает полное состояние всех объектов. Проблема: goto/loop back-edge-ы это SafePoint, но spin-loops на примитивах или tight loops без object access — НЕТ. Если горячий метод выполняет `while(counter < limit) { counter++; }` — JVMTI никогда не "поймает" его: он не проходит SafePoint. async-profiler использует SIGPROF + AsyncGetCallTrace — OS прерывает поток в ЛЮБОЙ момент независимо от SafePoint. Результат: async-profiler показывает реальные горячие места, JVMTI — места около SafePoint.
-
-**Q2: Как JFR Streaming API позволяет real-time мониторинг без записи в файл?**
-
-> JFR хранит события в ring buffer в памяти JVM. `RecordingStream` читает из этого буфера в реальном времени: `stream.onEvent("jdk.GCPhasePause", handler)` регистрирует callback который вызывается для каждого события. Поток `RecordingStream` работает в фоне, периодически читая из buffer (configurable через `setMaxAge`/`setMaxSize`). Это позволяет: мониторить GC паузы и алертить если пауза > 200ms, анализировать аллокации в real-time, триггерить heap dump при определённых условиях — всё без записи в файл и без значительного overhead.
-
-**Q3: Что показывает Retained Size в MAT и почему он важнее Shallow Size?**
-
-> Shallow Size — только размер самого объекта (заголовок + поля). Retained Size — сколько памяти освободится если этот объект и все объекты, доступные ТОЛЬКО через него, будут удалены GC. Пример: `ArrayList` из 1M строк — Shallow Size = 40 байт (только внутренний массив ссылок), Retained Size = 40 + 1M*(56+длина строки) байт. В Dominator Tree MAT показывает Retained Size — это реальный impact объекта на память. Если вижу объект с Retained Size = 800MB — вот ваш memory leak!
-
-**Q4: Как диагностировать CPU throttling в Kubernetes контейнере через JVM метрики?**
-
-> CPU throttling в k8s происходит когда контейнер превышает `cpu.limits`. JVM видит это как увеличение latency без видимой причины в профиле. Диагностика: (1) `container_cpu_cfs_throttled_seconds_total` в Prometheus — если > 20% → throttling; (2) `jvm_gc_pause_seconds` возрастают — GC потоки также throttled; (3) async-profiler wall-clock mode покажет потоки "ждущие" CPU не из-за IO, а из-за планировщика. Решение: увеличить `cpu.limits` или использовать `-XX:ActiveProcessorCount` (JDK 10+) для корректного обнаружения vCPU.
-
-**Q5: Как использовать JFR кастомные события для business observability?**
-
-> Кастомные JFR события позволяют добавить бизнес-контекст в низкоуровневый профиль JVM: `@Name("com.company.UserLogin") class UserLoginEvent extends Event { public long userId; public String region; }`. Преимущества: (1) когда видишь в JFR запись "долгий GC" — рядом видишь какой именно user request обрабатывался → корреляция; (2) overhead минимален — JFR использует lock-free буферы; (3) `event.shouldCommit()` проверяет включён ли threshold перед вычислением expensive полей; (4) можно анализировать вместе с системными событиями в JMC — видеть "user login занял 500ms из которых 300ms GC пауза".
-
-## Связанные темы
-
-- [[JIT Compiler & Optimizations]] — что JIT делает с горячим кодом
-- [[Java Agents & Instrumentation API]] — агенты для профилировщиков
-- [[Java Memory Structure]] — GC алгоритмы и диагностика памяти
-- [[Grafana, Prometheus, OpenTelemetry и Jaeger]] — метрики и трейсинг
+- **SafePoint bias в продакшне** — при диагностике production проблем с VisualVM/YourKit можно получить ложные результаты: tight loops без object access никогда не попадут в SafePoint → профиль показывает "горячим" другой код. Используй async-profiler.
+- **Wall-clock vs CPU** — wall-clock профилирование показывает sleeping/waiting потоки. Для CPU-bound: CPU mode. Для I/O latency: wall-clock mode.
+- **Heap dump останавливает JVM** — `jmap`/`GC.heap_dump` — STW операция. На больших heap (>8 GB) может занять минуты. В продакшне: автодамп при OOM или делай в off-peak.
+- **JFR Streaming overhead** — хотя JFR production-safe, `RecordingStream` с подпиской на `ObjectAllocationInNewTLAB` может добавлять overhead при высоком alloc rate. Используй `setMaxSize`/`setMaxAge` для ограничения буфера.
+- **async-profiler в контейнере** — требует `--cap-add=SYS_ADMIN` или `--privileged`. В managed k8s (EKS, GKE) это часто невозможно. Альтернатива: Java агент (без root): `./asprof -agentpath`.
+- **MAT Retained Size для объектов в циклических графах** — MAT вычисляет retained через dominance tree. Объекты в циклических ссылках могут показывать неожиданный retained (ни один не доминирует другого). Ориентируйся на "Leak Suspects" отчёт.

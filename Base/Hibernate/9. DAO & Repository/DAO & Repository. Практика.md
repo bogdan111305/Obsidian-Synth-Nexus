@@ -849,4 +849,206 @@ public class AdvancedProxyFactory {
 - **Оптимизацию** производительности
 - **Обеспечение** надежности и поддерживаемости кода
 
-Правильная реализация всех компонентов обеспечивает создание масштабируемых и тестируемых приложений. 
+Правильная реализация всех компонентов обеспечивает создание масштабируемых и тестируемых приложений.
+
+---
+
+## Senior-insights: Spring Data JPA паттерны
+
+### Почему @Repository часто не нужен с JpaRepository
+
+`JpaRepository` уже наследует `Repository` — маркерный интерфейс Spring Data. Spring Data автоматически зарегистрирует реализацию при сканировании компонентов.
+
+```java
+// @Repository НЕ нужен — Spring Data сам найдёт и зарегистрирует
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByEmail(String email);
+    List<User> findByActiveTrue();
+}
+
+// @Repository нужен только для ручных реализаций с EntityManager,
+// чтобы Spring преобразовывал JPA-исключения в DataAccessException
+@Repository
+public class CustomUserRepositoryImpl {
+    @PersistenceContext
+    private EntityManager em;
+    // ...
+}
+```
+
+> [!INFO]
+> `@Repository` обеспечивает трансляцию JPA-исключений в Spring `DataAccessException`. В `JpaRepository` это уже встроено через `SimpleJpaRepository`.
+
+### Specification pattern для динамических фильтров
+
+`Specification<T>` — паттерн для type-safe динамических WHERE-условий. Базируется на Criteria API.
+
+```java
+// Интерфейс репозитория
+public interface UserRepository extends JpaRepository<User, Long>,
+                                        JpaSpecificationExecutor<User> {
+}
+
+// Класс с Specification-ами (статические фабричные методы)
+public class UserSpecifications {
+
+    public static Specification<User> hasEmail(String email) {
+        return (root, query, cb) ->
+            email == null ? null : cb.equal(root.get(User_.email), email);
+    }
+
+    public static Specification<User> isActive() {
+        return (root, query, cb) -> cb.isTrue(root.get(User_.active));
+    }
+
+    public static Specification<User> hasRole(Role role) {
+        return (root, query, cb) ->
+            role == null ? null : cb.equal(root.get(User_.role), role);
+    }
+
+    public static Specification<User> registeredAfter(LocalDate date) {
+        return (root, query, cb) ->
+            date == null ? null : cb.greaterThanOrEqualTo(root.get(User_.createdAt), date);
+    }
+}
+
+// Использование: комбинируем условия динамически
+@Service
+public class UserService {
+
+    public List<User> searchUsers(UserSearchRequest request) {
+        Specification<User> spec = Specification.where(UserSpecifications.isActive())
+            .and(UserSpecifications.hasEmail(request.getEmail()))
+            .and(UserSpecifications.hasRole(request.getRole()))
+            .and(UserSpecifications.registeredAfter(request.getRegisteredAfter()));
+
+        return userRepository.findAll(spec);
+    }
+}
+```
+
+### Кастомная реализация через фрагменты (fragment interfaces)
+
+Spring Data позволяет добавить кастомные методы через паттерн "фрагмент интерфейса":
+
+```java
+// 1. Интерфейс фрагмента
+public interface UserRepositoryCustom {
+    List<User> findUsersWithComplexCriteria(ComplexFilter filter);
+    void bulkDeactivate(List<Long> ids);
+}
+
+// 2. Реализация фрагмента (имя: {репозиторий}Impl)
+@Repository
+public class UserRepositoryCustomImpl implements UserRepositoryCustom {
+
+    @PersistenceContext
+    private EntityManager em;
+
+    @Override
+    public List<User> findUsersWithComplexCriteria(ComplexFilter filter) {
+        // Сложный Criteria API запрос
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<User> cq = cb.createQuery(User.class);
+        Root<User> root = cq.from(User.class);
+
+        List<Predicate> predicates = new ArrayList<>();
+        if (filter.getMinAge() != null) {
+            predicates.add(cb.greaterThanOrEqualTo(root.get(User_.age), filter.getMinAge()));
+        }
+        if (filter.getDepartment() != null) {
+            Join<User, Department> dept = root.join(User_.department);
+            predicates.add(cb.equal(dept.get(Department_.name), filter.getDepartment()));
+        }
+
+        cq.where(predicates.toArray(new Predicate[0]));
+        return em.createQuery(cq).getResultList();
+    }
+
+    @Override
+    @Transactional
+    public void bulkDeactivate(List<Long> ids) {
+        em.createQuery("UPDATE User u SET u.active = false WHERE u.id IN :ids")
+          .setParameter("ids", ids)
+          .executeUpdate();
+    }
+}
+
+// 3. Финальный репозиторий наследует оба интерфейса
+public interface UserRepository extends JpaRepository<User, Long>,
+                                        JpaSpecificationExecutor<User>,
+                                        UserRepositoryCustom {
+    // Стандартные методы Spring Data + кастомные из UserRepositoryCustom
+}
+```
+
+### Проблема N+1 в Spring Data: @EntityGraph на методе репозитория
+
+Spring Data по умолчанию использует `FetchType` из маппинга. Для LAZY-ассоциаций при запросе списка — классический N+1.
+
+```java
+@Entity
+public class User {
+    @ManyToOne(fetch = FetchType.LAZY) // LAZY по умолчанию
+    private Department department;
+}
+
+// ПРОБЛЕМА: N+1
+List<User> users = userRepository.findAll();
+for (User u : users) {
+    u.getDepartment().getName(); // N дополнительных SELECT!
+}
+```
+
+**Решение 1: @EntityGraph на методе репозитория**
+
+```java
+public interface UserRepository extends JpaRepository<User, Long> {
+
+    // Загружаем department вместе с user (JOIN FETCH)
+    @EntityGraph(attributePaths = {"department"})
+    List<User> findAll();
+
+    // Для конкретного метода
+    @EntityGraph(attributePaths = {"department", "orders"})
+    @Query("SELECT u FROM User u WHERE u.active = true")
+    List<User> findActiveUsersWithDetails();
+
+    // Использовать именованный EntityGraph
+    @EntityGraph(value = "User.withDepartmentAndOrders")
+    Optional<User> findById(Long id);
+}
+
+// Именованный EntityGraph на entity:
+@Entity
+@NamedEntityGraph(
+    name = "User.withDepartmentAndOrders",
+    attributeNodes = {
+        @NamedAttributeNode("department"),
+        @NamedAttributeNode(value = "orders", subgraph = "order-items")
+    },
+    subgraphs = @NamedSubgraph(
+        name = "order-items",
+        attributeNodes = @NamedAttributeNode("items")
+    )
+)
+public class User { ... }
+```
+
+> [!WARNING]
+> `@EntityGraph` с несколькими коллекциями (`orders` + `items`) может вызвать **MultipleBagFetchException** или декартово произведение. Безопаснее использовать `Set` вместо `List` для нескольких eager-коллекций, или разбить на несколько запросов.
+
+**Решение 2: @Query с JOIN FETCH**
+
+```java
+@Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.department LEFT JOIN FETCH u.orders")
+List<User> findAllWithAssociations();
+// DISTINCT нужен чтобы убрать дублирование из-за JOIN
+```
+
+---
+
+**Связанные файлы:**
+- [[DAO & Repository. CRUD]] — базовые операции
+- [[Entity Graphs]] — подробнее об EntityGraph
+- [[Общая информация и базовые варианты решения]] — N+1 проблема 

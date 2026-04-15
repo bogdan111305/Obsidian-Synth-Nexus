@@ -167,6 +167,148 @@ for (Tuple t : tuples) {
 
 ---
 
+## 11. Senior-insights: продвинутые возможности <a name="senior"></a>
+
+### Subqueries: Subquery<T> и корреляция
+
+```java
+CriteriaBuilder cb = em.getCriteriaBuilder();
+
+// Subquery: найти пользователей, у которых есть хоть один заказ > 1000
+CriteriaQuery<User> cq = cb.createQuery(User.class);
+Root<User> user = cq.from(User.class);
+
+Subquery<Long> subquery = cq.subquery(Long.class);
+Root<Order> order = subquery.from(Order.class);
+subquery.select(order.get(Order_.userId))
+        .where(
+            cb.greaterThan(order.get(Order_.total), new BigDecimal("1000")),
+            cb.equal(order.get(Order_.userId), user.get(User_.id)) // корреляция
+        );
+
+cq.where(cb.exists(subquery));
+List<User> result = em.createQuery(cq).getResultList();
+```
+
+### CriteriaUpdate и CriteriaDelete
+
+```java
+// CriteriaUpdate — типобезопасный UPDATE
+CriteriaBuilder cb = em.getCriteriaBuilder();
+CriteriaUpdate<Product> update = cb.createCriteriaUpdate(Product.class);
+Root<Product> root = update.from(Product.class);
+
+update.set(root.get(Product_.price), cb.prod(root.get(Product_.price), 1.1))
+      .where(cb.equal(root.get(Product_.category), "electronics"));
+
+int updated = em.createQuery(update).executeUpdate();
+
+// CriteriaDelete — типобезопасный DELETE
+CriteriaDelete<Order> delete = cb.createCriteriaDelete(Order.class);
+Root<Order> orderRoot = delete.from(Order.class);
+
+delete.where(
+    cb.lessThan(orderRoot.get(Order_.createdAt), LocalDate.now().minusYears(2))
+);
+
+int deleted = em.createQuery(delete).executeUpdate();
+```
+
+> [!WARNING]
+> `CriteriaUpdate` и `CriteriaDelete` — bulk операции. Они не инвалидируют L2 Cache и не вызывают lifecycle callbacks, аналогично HQL bulk UPDATE/DELETE.
+
+### exists / not exists через Subquery
+
+```java
+// Найти отделы БЕЗ ни одного сотрудника (NOT EXISTS)
+CriteriaQuery<Department> cq = cb.createQuery(Department.class);
+Root<Department> dept = cq.from(Department.class);
+
+Subquery<Long> sub = cq.subquery(Long.class);
+Root<Employee> emp = sub.from(Employee.class);
+sub.select(emp.get(Employee_.id))
+   .where(cb.equal(emp.get(Employee_.department), dept)); // корреляция
+
+cq.where(cb.not(cb.exists(sub)));
+
+List<Department> emptyDepts = em.createQuery(cq).getResultList();
+```
+
+### Multiselect и Tuple projections
+
+```java
+// Tuple: выбрать несколько полей без DTO
+CriteriaQuery<Tuple> tq = cb.createTupleQuery();
+Root<User> user = tq.from(User.class);
+
+tq.multiselect(
+    user.get(User_.id).alias("userId"),
+    user.get(User_.email).alias("email"),
+    user.get(User_.company).get(Company_.name).alias("companyName")
+);
+
+List<Tuple> tuples = em.createQuery(tq).getResultList();
+for (Tuple t : tuples) {
+    Long id = t.get("userId", Long.class);
+    String email = t.get("email", String.class);
+    String companyName = t.get("companyName", String.class);
+}
+
+// DTO через construct:
+CriteriaQuery<UserDto> dtoQuery = cb.createQuery(UserDto.class);
+Root<User> u = dtoQuery.from(User.class);
+dtoQuery.select(cb.construct(
+    UserDto.class,
+    u.get(User_.id),
+    u.get(User_.email),
+    u.get(User_.company).get(Company_.name)
+));
+List<UserDto> dtos = em.createQuery(dtoQuery).getResultList();
+```
+
+### Сравнение с QueryDSL: когда что выбирать
+
+| Критерий | Criteria API | QueryDSL |
+|----------|-------------|---------|
+| Типобезопасность | Да (через метамодель) | Да (через Q-классы) |
+| Читаемость | Низкая (verbose) | Высокая (fluent API) |
+| Поддержка JPA | Стандарт JPA | Внешняя библиотека |
+| Сложные запросы | Громоздко | Элегантно |
+| Поддержка | Всегда (JPA стандарт) | Требует зависимость |
+| Дополнительная генерация | `hibernate-jpamodelgen` | `querydsl-apt` |
+
+```java
+// Criteria API — более verbose:
+cq.where(
+    cb.and(
+        cb.equal(root.get(User_.active), true),
+        cb.greaterThan(root.get(User_.age), 18)
+    )
+);
+
+// QueryDSL — более читаемо:
+queryFactory.selectFrom(QUser.user)
+    .where(QUser.user.active.isTrue()
+        .and(QUser.user.age.gt(18)))
+    .fetch();
+```
+
+**Когда выбирать Criteria API**:
+- Проект не хочет внешних зависимостей
+- Нужна стандартная JPA совместимость
+- Простые динамические фильтры
+
+**Когда выбирать QueryDSL**:
+- Сложные динамические запросы с множеством условий
+- Важна читаемость кода
+- Команда готова добавить зависимость
+
+---
+
 **Дополнительные ресурсы:**
 - [Hibernate Criteria API Guide](https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#criteria)
 - [JPA Criteria API Guide](https://jakarta.ee/specifications/persistence/3.0/jakarta-persistence-spec-3.0.html#criteria)
+
+**Связанные файлы:**
+- [[HQL]] — HQL/JPQL запросы
+- [[Querydsl]] — QueryDSL подробнее
