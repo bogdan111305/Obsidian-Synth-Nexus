@@ -158,6 +158,123 @@ SELECT c.name, AVG(p.amount) FROM Company c JOIN c.users u JOIN u.payments p GRO
 
 ---
 
+## 12. Senior-insights: Hibernate 6+ и подводные камни <a name="senior"></a>
+
+### Новый API Hibernate 6: createSelectionQuery() и createMutationQuery()
+
+В Hibernate 6 появился типобезопасный API вместо устаревшего `createQuery()`:
+
+```java
+// Hibernate 6+: типобезопасные варианты
+Session session = entityManager.unwrap(Session.class);
+
+// Для SELECT-запросов
+List<User> users = session.createSelectionQuery(
+    "FROM User u WHERE u.active = true", User.class)
+    .getResultList();
+
+// Для UPDATE/DELETE
+int updated = session.createMutationQuery(
+    "UPDATE User u SET u.active = false WHERE u.lastLogin < :cutoff")
+    .setParameter("cutoff", LocalDate.now().minusYears(1))
+    .executeUpdate();
+
+// Устаревший способ (всё ещё работает, но без type-safety):
+// session.createQuery("FROM User", User.class)
+```
+
+> [!INFO]
+> `createSelectionQuery()` выбросит исключение если попытаться передать DML-запрос. Это помогает поймать ошибки на этапе разработки.
+
+### Window Functions в Hibernate 6+ (ROW_NUMBER, RANK)
+
+Hibernate 6 добавил поддержку оконных функций SQL:
+
+```java
+// ROW_NUMBER для нумерации строк внутри группы
+List<Object[]> results = entityManager.createQuery(
+    """
+    SELECT u.name,
+           u.department,
+           ROW_NUMBER() OVER (PARTITION BY u.department ORDER BY u.salary DESC) AS rank
+    FROM User u
+    """)
+    .getResultList();
+
+// RANK для ранжирования (с пропусками при одинаковых значениях)
+List<Object[]> ranked = entityManager.createQuery(
+    """
+    SELECT p.productName,
+           p.category,
+           RANK() OVER (PARTITION BY p.category ORDER BY p.sales DESC) AS salesRank
+    FROM Product p
+    """)
+    .getResultList();
+```
+
+### CTE (WITH clause) в HQL
+
+```java
+// Common Table Expression в Hibernate 6
+List<User> topUsers = entityManager.createQuery(
+    """
+    WITH top_users AS (
+        SELECT u FROM User u WHERE u.totalOrders > 100
+    )
+    SELECT u FROM top_users u ORDER BY u.totalOrders DESC
+    """, User.class)
+    .setMaxResults(10)
+    .getResultList();
+```
+
+### FILTER предложение для агрегатных функций
+
+```java
+// FILTER позволяет считать разные агрегаты с разными условиями за один запрос
+List<Object[]> stats = entityManager.createQuery(
+    """
+    SELECT
+        u.department,
+        COUNT(u),
+        COUNT(u) FILTER (WHERE u.active = true) AS activeCount,
+        AVG(u.salary) FILTER (WHERE u.role = 'SENIOR') AS avgSeniorSalary
+    FROM User u
+    GROUP BY u.department
+    """)
+    .getResultList();
+```
+
+### Bulk UPDATE/DELETE и их влияние на L2 Cache
+
+> [!WARNING]
+> **Bulk UPDATE/DELETE через HQL не инвалидируют L2 Cache!** Это частая ловушка при использовании Second Level Cache.
+
+```java
+// После этого bulk update — L2 Cache содержит устаревшие данные!
+entityManager.createQuery(
+    "UPDATE Product p SET p.price = p.price * 1.1 WHERE p.category = :cat")
+    .setParameter("cat", "electronics")
+    .executeUpdate();
+
+// Product из L2 Cache будут возвращать СТАРЫЕ цены до истечения TTL
+Product product = entityManager.find(Product.class, someId); // HIT в L2 Cache!
+
+// ПРАВИЛЬНО: инвалидировать вручную
+entityManager.createQuery("UPDATE Product p SET p.price = p.price * 1.1 WHERE ...")
+    .executeUpdate();
+sessionFactory.getCache().evictEntityData(Product.class); // инвалидировать кэш
+```
+
+> [!INFO]
+> Аналогичная ситуация с `DELETE FROM Entity`: bulk delete не вызывает `@PreRemove` callbacks и не инвалидирует L2 Cache.
+
+---
+
 **Дополнительные ресурсы:**
 - [Hibernate HQL Guide](https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#hql)
 - [JPA JPQL Guide](https://jakarta.ee/specifications/persistence/3.0/jakarta-persistence-spec-3.0.html#jpql)
+
+**Связанные файлы:**
+- [[Criteria API]] — типобезопасный способ построения запросов
+- [[Batch операции]] — bulk операции и их ограничения
+- [[Cache Concurrency Strategy]] — инвалидация L2 Cache
