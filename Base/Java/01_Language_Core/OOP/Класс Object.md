@@ -3,210 +3,132 @@
 [[Наследование]], [[Интерфейсы]], [[Java Reflection API]], [[Java Monitor]], [[Reference Types (Weak, Soft, Phantom)]]
 
 ---
+Класс `Object` — это «Адам» мира Java. Это корень всей иерархии, и каждый класс, который вы пишете, неявно наследует его гены. Если вы понимаете `Object`, вы понимаете, как Java управляет памятью, синхронизацией и коллекциями.
 
-## equals / hashCode — контракт пары
+---
+## Контракт equals & hashCode: Неразлучная пара
 
-```java
-// Контракт equals:
-// 1. Рефлексивность: x.equals(x) == true
-// 2. Симметричность: x.equals(y) == y.equals(x)
-// 3. Транзитивность: x.equals(y) && y.equals(z) → x.equals(z)
-// 4. Консистентность: результат стабилен пока объект не изменился
-// 5. Нулевое сравнение: x.equals(null) == false
+Это самый частый вопрос на интервью. Если вы переопределяете один метод, вы **обязаны** переопределить другой.
 
-@Override
-public boolean equals(Object obj) {
-    if (this == obj) return true;                    // оптимизация ссылочного равенства
-    if (!(obj instanceof Person other)) return false; // pattern matching (Java 16+)
-    return age == other.age && Objects.equals(name, other.name);
-}
+### Правила equals (Контракт):
 
-@Override
-public int hashCode() {
-    return Objects.hash(name, age); // согласован с equals — те же поля!
-}
-```
+1. **Рефлексивность:** `x.equals(x)` всегда `true`.
+    
+2. **Симметричность:** Если `x.equals(y)`, то и `y.equals(x)`.
+    
+3. **Транзитивность:** Если `x.equals(y)` и `y.equals(z)`, то `x.equals(z)`.
+    
+4. **Консистентность:** Результат не меняется, пока не изменены поля объекта.
+    
+5. **Null-check:** `x.equals(null)` всегда `false`.
+    
 
-**Контракт hashCode:**
-- Если `x.equals(y)` → `x.hashCode() == y.hashCode()` (обязательно)
-- Если `x.hashCode() == y.hashCode()` → `x.equals(y)` может быть false (коллизия, допустимо)
+### Почему ломается HashMap?
 
-**Ловушка:** переопределил `equals` без `hashCode` → `HashSet.contains(obj)` вернёт `false`, `HashMap.get(key)` вернёт `null` — объект «потерян».
+Если у двух объектов `equals == true`, но `hashCode` разный, `HashMap` положит их в разные «корзины» (buckets). При попытке достать объект, карта вычислит хэш, пойдет в одну корзину, а объект лежит в другой. **Результат:** объект есть в коллекции, но вы его никогда не найдете.
 
-```java
-// record — автогенерация правильного equals/hashCode/toString:
-record Point(int x, int y) {}  // все 3 метода сгенерированы на основе полей
-```
+> **Modern Java Tip:** Используйте `record` (Java 14+). В них `equals`, `hashCode` и `toString` генерируются автоматически на основе полей. Это избавляет от тонн бойлерплейта и ошибок.
 
 ---
 
-## toString
+## 2. toString: Лицо вашего объекта
 
-```java
-// По умолчанию: "ClassName@hexHashCode" — бесполезно для отладки
-// Переопределяй для читаемого вывода:
-@Override
-public String toString() {
-    return "Person{name='%s', age=%d}".formatted(name, age);
-}
+По умолчанию `toString()` выдает нечто вроде `Comany@2f92e0f4`. Это полезно только для JVM, но бесполезно для человека.
 
-// Или через lombok: @ToString
-// Или record — toString() генерируется автоматически
-```
+- **Зачем:** Логирование и отладка.
+    
+- **Как:** Используйте `String.formatted()` или интерполяцию для читаемости.
+    
 
 ---
 
-## clone — shallow copy и проблемы
+## 3. clone: Опасное наследие
 
-```java
-// Требует реализации Cloneable (marker interface) + override clone()
-public class Person implements Cloneable {
-    private String name;
-    private Address address; // изменяемый объект!
+Интерфейс `Cloneable` — это «маркерный» интерфейс, и его реализация в Java считается неудачным проектным решением.
 
-    @Override
-    public Person clone() {
-        try {
-            Person cloned = (Person) super.clone(); // shallow copy!
-            cloned.address = this.address.clone();  // deep copy вручную
-            return cloned;
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError(); // не произойдёт — мы реализуем Cloneable
-        }
-    }
-}
-```
+- **Shallow copy (Поверхностное):** Копируются только примитивы и ссылки. Если у вас внутри был `List`, и оригинал, и клон будут смотреть на **один и тот же** список.
+    
+- **Deep copy (Глубокое):** Нужно вручную копировать все вложенные объекты.
+    
 
-**Проблема `clone()`:** shallow copy копирует ссылки — изменение `address` в клоне меняет оригинал. Deep copy надо писать вручную рекурсивно.
+**Вердикт:** Забудьте про `clone()`. Используйте **Copy Constructor** или **Static Factory Method**.
 
-**Предпочтительные альтернативы:**
-- Copy constructor: `new Person(original)` — явный и понятный
-- Static factory: `Person.copyOf(original)`
-- Serialization/deserialization (для deep copy сложных графов)
-
----
-
-## wait / notify / notifyAll
-
-```java
-// Вызов только внутри synchronized — иначе IllegalMonitorStateException
-synchronized (lock) {
-    while (!condition) {    // WHILE, не if — protection against spurious wakeups
-        lock.wait();        // освобождает monitor + блокирует поток
-    }
-    // condition выполнена — работаем
-}
-
-// Другой поток:
-synchronized (lock) {
-    condition = true;
-    lock.notifyAll();       // пробуждает ВСЕ ждущие потоки → они снова конкурируют за lock
-    // lock.notify() — только один случайный поток
-}
-```
-
-**Почему `while`, не `if`:** spurious wakeups — поток может проснуться без `notify()` (разрешено JMM). `while` защищает от этого.
-
-**Современная альтернатива:** `Lock` + `Condition` из `java.util.concurrent.locks` — поддерживает несколько condition variables, timed wait, interruptible wait.
-
----
-
-## getClass() vs instanceof
-
-```java
-Object obj = new Dog();
-
-// getClass() — точный тип, не учитывает полиморфизм:
-obj.getClass() == Dog.class    // true
-obj.getClass() == Animal.class // false
-
-// instanceof — с учётом иерархии (полиморфизм):
-obj instanceof Dog    // true
-obj instanceof Animal // true (Dog IS-A Animal)
-obj instanceof Object // true (всегда)
-
-// Pattern matching (Java 16+):
-if (obj instanceof Dog d) {
-    d.bark(); // d уже типизирован как Dog
-}
-```
-
-В `equals()` обычно `getClass() != obj.getClass()` — запрещает равенство с подклассом. Если нужен симметричный equals в иерархии — использовать `instanceof`.
-
----
-
-## Object Header — как объект выглядит в памяти
+Java
 
 ```
-Object layout (64-bit JVM, CompressedOops):
-┌─────────────────┬──────────────────────────────────┐
-│ Mark Word (8B)  │ hash, GC age, lock state/monitor │
-├─────────────────┼──────────────────────────────────┤
-│ Klass ptr (4B)  │ указатель на Class metadata      │
-├─────────────────┼──────────────────────────────────┤
-│ Fields...       │                                  │
-└─────────────────┴──────────────────────────────────┘
-
-Минимальный объект: 16 байт (8 Mark Word + 4 Klass + 4 выравнивание)
-```
-
-`hashCode()` по умолчанию вычисляется JVM и кэшируется в Mark Word. После вычисления живёт там постоянно. Это объясняет почему `System.identityHashCode(obj)` после смены состояния не меняется — он закэширован.
-
----
-
-## finalize → Cleaner API
-
-```java
-// finalize() — НИКОГДА не используй:
-// - Нет гарантии вызова (GC может не вызвать никогда)
-// - Задерживает сборку мусора (объект выживает минимум 2 GC цикла)
-// - Может "воскресить" объект (сохранив this куда-то в finalize)
-// - Удалён в Java 18 (JEP 421)
-
-// Правильная замена — Cleaner API (Java 9+):
-public class NativeResource implements AutoCloseable {
-    private static final Cleaner CLEANER = Cleaner.create();
-    private final Cleaner.Cleanable cleanable;
-    private final long nativeHandle;
-
-    public NativeResource(long handle) {
-        this.nativeHandle = handle;
-        // State должен быть static nested или внешним классом — НЕ inner
-        // (иначе захватывает this → Cleaner не сможет GC объект)
-        this.cleanable = CLEANER.register(this, new CleanupAction(handle));
-    }
-
-    private static class CleanupAction implements Runnable {
-        private final long handle;
-        CleanupAction(long handle) { this.handle = handle; }
-
-        @Override
-        public void run() { NativeLibrary.free(handle); } // вызовется при GC
-    }
-
-    @Override
-    public void close() { cleanable.clean(); } // явное освобождение (предпочтительно)
+public Person(Person other) {
+    this.name = other.name;
+    this.address = new Address(other.address); // Глубокое копирование
 }
 ```
 
 ---
 
-## Вопросы на интервью
+## 4. wait, notify, notifyAll: Низкоуровневая магия
 
-- Почему при переопределении `equals` обязательно переопределять `hashCode`?
-- Можно ли нарушить контракт `equals`? К чему это приводит?
-- Что такое spurious wakeup? Почему `wait()` нужно вызывать в `while`, не в `if`?
-- Чем `clone()` плохо? Какие альтернативы?
-- `getClass() == other.getClass()` vs `instanceof` в `equals()` — когда что использовать?
-- Что хранится в Object Header? Что такое Mark Word?
+Эти методы управляют **монитором** объекта.
+
+- **wait():** Отдает монитор и засыпает, пока его не пнут через `notify()`.
+    
+- **Почему `while`, а не `if`?** Существует понятие **Spurious Wakeup** (ложное пробуждение). Поток может проснуться сам по себе без команды. Проверка условия в `while` гарантирует, что мы снова уснем, если условие не выполнено.
+    
+
+> **Важно:** Эти методы работают только внутри `synchronized` блоков. Иначе — `IllegalMonitorStateException`.
 
 ---
 
-## Подводные камни
+## 5. getClass() vs instanceof
 
-- **Переопределил `equals`, забыл `hashCode`** — `HashMap`/`HashSet` не находят объект. Нарушение контракта.
-- **Изменяемые поля в `equals`/`hashCode`** — после изменения поля объект нельзя найти в HashMap (лежит в старом бакете). Всегда иммутабельные ключи.
-- **`wait()` без `synchronized`** — `IllegalMonitorStateException` в runtime. JVM не может проверить это статически.
-- **`clone()` без deep copy** — `cloned.address == original.address`, изменения в одном меняют другой.
-- **`Cloneable` без override `clone()`** — `super.clone()` доступен, но `protected` → надо override с public.
-- **`finalize()` в Java 18+** — удалён. Использование → compile warning → runtime → ничего не вызовется.
+Тут часто путаются. Вот шпаргалка:
+
+|**Метод**|**Что проверяет**|**Учитывает наследование?**|
+|---|---|---|
+|`instanceof`|Является ли объект типом X или его подтипом?|**Да** (Полиморфизм)|
+|`getClass() == X.class`|Является ли объект **строго** типом X?|**Нет** (Точное совпадение)|
+
+---
+
+## 6. Object Header: Анатомия в памяти
+
+Каждый объект в куче имеет «шапку». В 64-битной JVM (с включенным сжатием указателей) она обычно занимает 12 байт + выравнивание до 16.
+
+1. **Mark Word (8 байт):** Хранит хэш-код, состояние блокировки (biassed, lightweight, heavyweight) и возраст объекта для GC.
+    
+2. **Klass Pointer (4 байта):** Ссылка на метаданные класса в Metaspace.
+    
+
+---
+
+## 7. Смерть finalize() и Cleaner API
+
+Метод `finalize()` официально признан «ошибкой молодости» и удален в Java 18.
+
+- **Проблема:** Вы никогда не знаете, когда он вызовется. Он может вызвать утечки памяти и воскрешать объекты из мертвых.
+    
+- **Решение:** Используйте `try-with-resources` (`AutoCloseable`) или **Cleaner API**, если работаете с нативной памятью.
+    
+
+---
+
+## Вопросы для самопроверки (Interview Prep)
+
+1. **Что будет, если `hashCode()` всегда возвращает `1`?**
+    
+    - _Ответ:_ `HashMap` превратится в связный список. Поиск станет $O(n)$ вместо $O(1)$.
+        
+2. **Почему методы ожидания (`wait`) находятся в `Object`, а не в `Thread`?**
+    
+    - _Ответ:_ Потому что блокировка (монитор) вешается на **объект**, а не на поток.
+        
+3. **Можно ли переопределить `getClass()`?**
+    
+    - _Ответ:_ Нет, он помечен как `final`.
+        
+
+---
+
+### Подводные камни (Pitfalls)
+
+- **Мутабельные ключи:** Если вы измените поле объекта, которое участвует в расчете `hashCode`, пока он лежит в `HashMap`, вы его больше не найдете. **Ключи должны быть иммутабельными.**
+    
+- **Reflection:** Через рефлексию можно достучаться до чего угодно, но `Object Header` защищен на уровне JVM, его так просто не поменяешь.
