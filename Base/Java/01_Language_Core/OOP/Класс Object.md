@@ -1,8 +1,3 @@
-# Класс Object в Java
-
-> **Object** — корень иерархии. Каждый класс неявно наследует `Object`. Ключевые методы: `equals`/`hashCode` (контракт пары), `toString`, `clone`, `wait`/`notify`/`notifyAll`, `getClass`. `finalize()` — удалён в Java 18, замена — `Cleaner API`.
-> На интервью: контракт `equals`/`hashCode`, почему нарушение ломает HashMap, `wait()` внутри `synchronized`, `clone()` vs copy constructor, Object header.
-
 ## Связанные темы
 
 [[Наследование]], [[Интерфейсы]], [[Java Reflection API]], [[Java Monitor]], [[Reference Types (Weak, Soft, Phantom)]]
