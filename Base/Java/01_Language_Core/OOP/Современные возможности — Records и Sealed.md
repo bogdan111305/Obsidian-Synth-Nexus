@@ -37,7 +37,6 @@ public record Wrapper(List<String> items) {
 ## Sealed Classes: Запечатанные иерархии (Java 17+)
 
 **Sealed-типы** позволяют ограничить круг наследников. Это реализация «Sum Type».
-
 ### Синтаксис и правила
 
 ```java
