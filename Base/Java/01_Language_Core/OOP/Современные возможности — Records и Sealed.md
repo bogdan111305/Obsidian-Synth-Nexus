@@ -27,7 +27,7 @@
 
 Идеальное место для валидации или защитного копирования. Параметры в скобках не пишутся, а присваивание полей происходит неявно в конце:
 
-```
+```java
 public record Wrapper(List<String> items) {
     public Wrapper {
         if (items == null) throw new IllegalArgumentException();
@@ -48,7 +48,7 @@ public record Wrapper(List<String> items) {
 
 ### Синтаксис и правила
 
-```
+```java
 public sealed interface Shape permits Circle, Rectangle, Triangle {}
 
 public final class Circle    implements Shape { ... } // Дальше наследовать нельзя
@@ -57,14 +57,12 @@ public non-sealed class Triangle implements Shape { ... } // Открывает 
 ```
 
 _Правило:_ Каждый класс в `permits` обязан выбрать один из трех модификаторов: `final`, `sealed` или `non-sealed`. (Записи/Records неявно `final`, поэтому для них модификатор писать не нужно).
-
 ### Оптимизация JIT-компилятора (CHA)
 
 Благодаря метаданным `PermittedSubclasses`, JIT-компилятор использует **Class Hierarchy Analysis (CHA)**. Зная, что у `Shape` ровно три реализации, JVM может девиртуализировать вызовы методов и применить агрессивный инлайнинг (inlining), превращая полиморфные вызовы в прямые.
 
 ---
-
-## 3. Pattern Matching: Механизм деструктуризации и проверок
+## Pattern Matching: Механизм деструктуризации и проверок
 
 Это клей, который объединяет Records и Sealed Classes в мощный инструмент бизнес-логики, избавляя нас от цепочек `instanceof` + кастование.
 
@@ -72,9 +70,7 @@ _Правило:_ Каждый класс в `permits` обязан выбрат
 
 Переменная паттерна (pattern variable) автоматически кастуется, если проверка успешна.
 
-Java
-
-```
+```java
 // Классика:
 if (obj instanceof String s && s.length() > 5) {
     System.out.println(s.toUpperCase()); 
@@ -91,9 +87,7 @@ System.out.println(s.toUpperCase()); // s доступна здесь!
 
 `switch` теперь умеет работать с любыми типами, а не только с числами, строками и enum.
 
-Java
-
-```
+```java
 String describe(Object obj) {
     return switch (obj) {
         case Integer i when i < 0 -> "Отрицательное число"; // Guard-условие (when)
@@ -109,9 +103,7 @@ String describe(Object obj) {
 
 Главная магия — **деструктуризация**. Мы можем «разобрать» Record на составные части прямо в `switch` или `if`. Символ `_` (Java 22) позволяет игнорировать ненужные компоненты.
 
-Java
-
-```
+```java
 record Point(int x, int y) {}
 record Circle(Point center, double radius) {}
 
@@ -131,28 +123,25 @@ double process(Shape shape) {
 ```
 
 ---
-
 ## Вопросы на интервью (Senior Level)
 
 1. **Что такое "dominated by previous case" в `switch`?**
     
     - _Ответ:_ Это ошибка компиляции. Возникает, если вы поставите более общий кейс (например, `case Integer i`) **до** более специфичного (например, `case Integer i when i < 0`). Верхний перехватит всё, и нижний никогда не выполнится.
-        
+    
 2. **Зачем нужен модификатор `non-sealed`? Разве он не ломает идею `sealed`?**
     
     - _Ответ:_ Он нужен как «предохранительный клапан». Например, у вас есть AST-дерево, где встроенные узлы запечатаны (`sealed`), а узел `CustomNode` сделан `non-sealed`, чтобы пользователи вашей библиотеки могли писать свои расширения.
-        
+    
 3. **Можно ли изменить переменную паттерна (например, `s` в `obj instanceof String s`)?**
     
     - _Ответ:_ Нет, pattern variables неявно являются `effectively final`.
-        
+    
 4. **Сработает ли Record Pattern `case Point(int x, int y)` если в `switch` передать `null`?**
     
     - _Ответ:_ Нет. Паттерны типов и Record-паттерны не матчат `null`. Для него нужно писать отдельный `case null`.
-        
 
 ---
-
 ## Подводные камни (Pitfalls)
 
 - **NullPointerException в `switch`:** Раньше `switch` всегда бросал NPE при `null`. С появлением паттернов это поведение осталось для совместимости. Если вы передадите `null` в `switch` без явного `case null`, вы получите исключение.
