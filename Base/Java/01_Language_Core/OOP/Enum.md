@@ -29,133 +29,90 @@ public final class Planet extends java.lang.Enum<Planet> {
 
 **`ordinal()`** — 0-based порядковый номер. Зависит от порядка объявления. **Никогда не используй ordinal() в логике** — при изменении порядка объявления ломается сериализация/БД.
 
----
-
-## Enum с полями и методами
-
-```java
-public enum HttpStatus {
-    OK(200, "OK"),
-    NOT_FOUND(404, "Not Found"),
-    INTERNAL_SERVER_ERROR(500, "Internal Server Error");
-
-    private final int code;
-    private final String message;
-
-    HttpStatus(int code, String message) {  // конструктор всегда private/package
-        this.code = code;
-        this.message = message;
-    }
-
-    public int code() { return code; }
-    public String message() { return message; }
-
-    // Static factory по коду:
-    public static HttpStatus fromCode(int code) {
-        for (HttpStatus s : values()) {
-            if (s.code == code) return s;
-        }
-        throw new IllegalArgumentException("Unknown code: " + code);
-    }
-}
-
-HttpStatus.OK.code();          // 200
-HttpStatus.fromCode(404);      // NOT_FOUND
-```
+Перечисления (`Enum`) в Java — это не просто именованные константы. Это полноценные классы с «суперспособностями» от JVM. Они обеспечивают типобезопасность, защищают от дублирования объектов и предоставляют сверхбыстрые коллекции.
 
 ---
+## Магия компилятора: Что скрывает `enum`?
 
-## Enum с abstract методами
+Когда вы пишете `enum Planet { ... }`, компилятор превращает это в жестко структурированный Java-класс.
+
+**Ключевые фишки байткода:**
+
+- Класс помечается флагом `ACC_ENUM` и становится `final`.
+
+- Он наследует `java.lang.Enum<E>`, поэтому **не может наследовать другие классы** (множественное наследование классов в Java запрещено).
+
+- Все элементы — это `public static final` экземпляры этого же класса.
+
+> **Инсайд для интервью:** Почему `values()` — это ловушка? Компилятор генерирует метод `values()`, который возвращает массив всех констант. Но чтобы вы не могли испортить внутренний массив, он возвращает **клон** (`$VALUES.clone()`). В высоконагруженных циклах это создает лишний мусор (GC overhead). Лучше закэшировать результат один раз.
+
+---
+## Enum как Singleton: Абсолютная защита
+
+Джошуа Блох в «Effective Java» называет `enum` лучшим способом реализации Синглтона.
+
+**Почему он «бронированный»?**
+
+1. **Потокобезопасность:** JVM гарантирует, что статические поля (элементы enum) инициализируются один раз при загрузке класса в thread-safe режиме.
+
+2. **Защита от рефлексии:** Метод `Constructor.newInstance()` имеет явную проверку: если класс помечен как `ACC_ENUM`, он выбросит исключение. Создать второй экземпляр «черным ходом» не получится.
+
+3. **Защита от десериализации:** Обычные объекты при десериализации создают новый экземпляр. `Enum` же восстанавливается через `Enum.valueOf()`, возвращая ту же самую ссылку.
+
+---
+## Abstract методы и Strategy Pattern
+
+Enum позволяет задать разное поведение для каждой константы без огромных `if-else` или `switch`.
 
 ```java
 public enum Operation {
     PLUS  { @Override public double apply(double x, double y) { return x + y; } },
-    MINUS { @Override public double apply(double x, double y) { return x - y; } },
     TIMES { @Override public double apply(double x, double y) { return x * y; } };
 
     public abstract double apply(double x, double y);
 }
-
-// Каждый элемент — anonymous subclass Operation с собственной реализацией apply()
-// Использование: Operation.PLUS.apply(2, 3) → 5.0
 ```
 
----
-
-## EnumSet и EnumMap
-
-```java
-// EnumSet — битовая маска (long), максимум 64 элемента → O(1) операции
-EnumSet<Day> weekdays = EnumSet.range(Day.MONDAY, Day.FRIDAY);
-EnumSet<Day> weekend  = EnumSet.complementOf(weekdays);
-weekdays.contains(Day.MONDAY); // O(1) — битовая операция!
-
-// vs HashSet: EnumSet в 2-3x быстрее + меньше памяти
-
-// EnumMap — массив индексированный по ordinal() → O(1) get/put
-EnumMap<Day, String> schedule = new EnumMap<>(Day.class);
-schedule.put(Day.MONDAY, "Meeting");
-// vs HashMap: EnumMap в 2x быстрее + нет boxing ordinal'а
-```
+Под капотом для каждого элемента с телом `{...}` создается **анонимный подкласс** нашего перечисления.
 
 ---
+## Сверхбыстрые коллекции: EnumSet и EnumMap
 
-## Singleton через enum — идиоматично
+Если вы используете `enum` как ключи, обычные `HashSet` и `HashMap` — это «стрельба из пушки по воробьям».
 
-```java
-// Самый надёжный Singleton в Java:
-public enum AppConfig {
-    INSTANCE;
+- **EnumSet:** Внутри это просто `long` (или массив `long[]`). Каждый элемент — это один бит. Проверка `contains` — это побитовая операция `&`, добавление — `|`. Это **самая быстрая коллекция** в Java.
 
-    private final Properties props = new Properties();
-
-    AppConfig() {
-        // инициализация при загрузке класса
-        props.setProperty("db.url", "jdbc:mysql://localhost/mydb");
-    }
-
-    public String get(String key) { return props.getProperty(key); }
-}
-
-AppConfig.INSTANCE.get("db.url");
-
-// Почему enum Singleton лучше:
-// 1. JVM гарантирует однократную инициализацию (thread-safe)
-// 2. Защищён от рефлексии (нельзя вызвать newInstance для enum)
-// 3. Защищён от десериализации (Serializable у enum особый)
-```
+- **EnumMap:** Внутри это обычный массив `Object[]`. В качестве индекса используется `ordinal()`. Никаких расчетов хэша и коллизий.
 
 ---
+## Главный грех: Использование `ordinal()`
 
-## Enum в switch
+Никогда не сохраняйте `ordinal()` в базу данных или не используйте его в бизнес-логике.
 
-```java
-// Enum + switch = exhaustive в Java 21 (без default если все case покрыты):
-HttpStatus status = getStatus();
-String msg = switch (status) {
-    case OK              -> "Success";
-    case NOT_FOUND       -> "Resource missing";
-    case INTERNAL_SERVER_ERROR -> "Server error";
-    // default не нужен — компилятор знает все элементы enum
-};
-```
+1. Вы поменяли порядок констант в коде → `ordinal` изменился.
+
+2. Вы удалили константу в середине → все `ordinal` после неё сдвинулись.
+
+3. **Результат:** Данные в БД превратились в тыкву.
+
+**Решение:** Всегда заводите собственное поле `id` или `code` и ищите по нему.
 
 ---
+## Вопросы на интервью (Interview Prep)
 
-## Вопросы на интервью
+1. **Можно ли наследоваться от Enum?** (Ответ: Нет, он неявно `final`. Можно только реализовывать интерфейсы).
 
-- Как компилятор реализует enum? Что хранит `java.lang.Enum`?
-- Почему нельзя использовать `ordinal()` в постоянной логике?
-- Почему `EnumSet` быстрее `HashSet`?
-- Почему Singleton через enum лучше double-checked locking?
-- Как реализовать enum с разным поведением для каждого элемента?
+2. **Как реализован `EnumSet` для перечисления с 100 элементами?** (Ответ: Если элементов $\le 64$, используется `RegularEnumSet` с одним `long`. Если больше — `JumboEnumSet` с массивом `long[]`).
+
+3. **Можно ли создать экземпляр Enum через Reflection API?** (Ответ: Нет, `newInstance` выдаст `IllegalArgumentException`).
+
+4. **В чем разница между `name()` и `toString()` в Enum?** (Ответ: `name()` — `final` метод, всегда возвращает имя константы. `toString()` можно переопределить для красивого вывода).
 
 ---
+## Подводные камни (Pitfalls)
 
-## Подводные камни
+- **Мутабельность:** Хотя поля в Enum принято делать `final`, технически вам никто не мешает сделать их изменяемыми. **Не делайте так.** Enum должен быть иммутабельным «справочником».
 
-- **`ordinal()` в БД/сериализации** — при добавлении нового элемента между существующими все ordinal сдвигаются → данные в БД становятся неверными. Используй `name()` или кастомное поле `code`.
-- **`values()` создаёт клон массива** — не вызывай в tight loop. Кэшируй: `private static final HttpStatus[] VALUES = values();`.
-- **enum не наследуется** — `final` неявно. Нельзя `class MyStatus extends HttpStatus`.
-- **enum implements** — enum может реализовывать интерфейсы. Полезно для Strategy Pattern.
-- **Рефлексия не может создать enum** — `Constructor.newInstance()` для enum → `IllegalArgumentException`. Это одна из защит Singleton through enum.
+- **Serialization:** Помните, что `transient` и `serialVersionUID` в перечислениях игнорируются. Сериализуется только **имя** константы.
+
+- **Static блоки:** Если в конструкторе enum вы попытаетесь обратиться к статическому полю этого же enum (которое еще не инициализировано), вы получите `null` или `0`, так как элементы создаются в процессе статической инициализации сверху вниз.
