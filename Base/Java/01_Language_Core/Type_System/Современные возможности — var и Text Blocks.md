@@ -1,7 +1,6 @@
-
 ## Связанные темы
 
-- [[Современные возможности — Switch и Pattern Matching]] — Pattern Matching instanceof и switch
+- [[Современные возможности — Records и Sealed]] — Pattern Matching instanceof и switch
 - [[Java String]] — методы работы со строками
 ---
 В современной Java (версии 10–22) акцент сместился на **читаемость кода** и **снижение когнитивной нагрузки**. Инструменты `var`, **Text Blocks** и **Unnamed Variables** позволяют убрать визуальный шум, оставляя на виду только суть алгоритма.
