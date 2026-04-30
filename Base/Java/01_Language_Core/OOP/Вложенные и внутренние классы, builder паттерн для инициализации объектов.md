@@ -3,169 +3,98 @@
 [[Инкапсуляция]], [[Поля, конструкторы, this, инициализаторы]], [[Java Stream API & Functional Programming]]
 
 ---
-
-## Сравнительная таблица
-
-| Тип | static? | Ссылка на внешний | Создание |
-|---|:---:|:---:|---|
-| Static nested class | Да | Нет | `new Outer.Nested()` |
-| Inner (non-static) class | Нет | Да (`this$0`) | `outer.new Inner()` |
-| Local class | Нет | Да | внутри метода |
-| Anonymous class | Нет | Да | `new Interface() {...}` |
+Вложенные классы в Java — это способ сгруппировать логику, которая не имеет смысла в отрыве от основного класса. Однако за этим синтаксическим сахаром скрываются серьезные механизмы управления памятью и байткодные нюансы.
 
 ---
 
-## Static Nested Class — группировка без связи
+## Четыре всадника вложенности
 
-```java
-public class HttpClient {
-    // Static nested: логически связан с HttpClient, но не зависит от его инстанса
-    public static class Builder {
-        private String baseUrl;
-        private int timeout = 30;
+В Java есть четыре способа объявить класс внутри другого класса. Выбор правильного типа — это вопрос производительности и чистоты архитектуры.
 
-        public Builder baseUrl(String url) { this.baseUrl = url; return this; }
-        public Builder timeout(int sec) { this.timeout = sec; return this; }
-        public HttpClient build() { return new HttpClient(this); }
-    }
-
-    private final String baseUrl;
-    private final int timeout;
-
-    private HttpClient(Builder b) {
-        this.baseUrl = b.baseUrl;
-        this.timeout = b.timeout;
-    }
-}
-
-HttpClient client = new HttpClient.Builder()
-    .baseUrl("https://api.example.com")
-    .timeout(60)
-    .build();
-```
-
-`Map.Entry<K,V>` в JDK — пример static nested interface.
+|**Тип**|**Модификатор**|**Ссылка на внешний (this$0)**|**Как создать**|
+|---|---|---|---|
+|**Static Nested**|`static`|**Нет**|`new Outer.Nested()`|
+|**Inner Class**|—|**Да**|`outerObj.new Inner()`|
+|**Local Class**|—|**Да**|Только внутри метода|
+|**Anonymous**|—|**Да**|`new Interface() { ... }`|
 
 ---
+## Static Nested Class: Просто сосед
 
-## Inner Class — доступ к внешнему объекту (осторожно с памятью)
+Статический вложенный класс — это обычный класс, который просто «живет» внутри другого для удобства упаковки.
 
-```java
-public class LinkedList<E> {
-    private Node<E> head;
-    private int size;
-
-    // Iterator — классический случай inner class:
-    // итератору нужен доступ к полям head, size
-    private class ListIterator implements Iterator<E> {
-        private Node<E> current = head; // доступ к полю внешнего класса!
-
-        @Override
-        public boolean hasNext() { return current != null; }
-
-        @Override
-        public E next() {
-            E val = current.val;
-            current = current.next;
-            return val;
-        }
-    }
-
-    public Iterator<E> iterator() { return new ListIterator(); }
-}
-```
-
-**Байткод inner class:**
-```
-class LinkedList$ListIterator {
-    final LinkedList this$0;  // синтетическое поле — ссылка на внешний объект
-    // Любое обращение к head → this$0.head
-}
-```
-
-**Ловушка:** inner class держит ссылку на внешний объект. Если inner class живёт долго (callback, future) → внешний объект не может быть GC'd → **утечка памяти**.
+- **Связь:** Он не имеет доступа к нестатическим полям внешнего класса.
+    
+- **Зачем:** Группировка вспомогательных сущностей (например, `Builder` для основного класса или `Map.Entry` в `HashMap`).
 
 ---
+## Inner Class: Скрытая угроза `this$0`
 
-## Anonymous Class vs Lambda
+Нестатический вложенный класс (Inner) всегда хранит неявную ссылку на объект внешнего класса. В байткоде это поле называется **`this$0`**.
 
-```java
-// Анонимный класс (до Java 8):
-Runnable r1 = new Runnable() {
-    @Override
-    public void run() { System.out.println("run"); }
-};
-// → компилятор создаёт class Outer$1 implements Runnable
-
-// Lambda (Java 8+) — предпочтительно для функциональных интерфейсов:
-Runnable r2 = () -> System.out.println("run");
-// → invokedynamic + LambdaMetafactory (нет нового класса)
-
-// Анонимный класс нужен когда:
-// 1. Нужно сохранять состояние (несколько полей)
-// 2. Реализуется нефункциональный интерфейс (>1 метода)
-// 3. Нужно extends, а не implements
-Comparator<String> withState = new Comparator<String>() {
-    private int compareCount = 0; // состояние
-    @Override
-    public int compare(String a, String b) {
-        compareCount++;
-        return a.compareTo(b);
-    }
-};
-```
-
-**Effectively final:** переменные из окружающего scope, захваченные анонимным классом или лямбдой, должны быть `final` или effectively final (не изменяться после инициализации). Причина: они копируются в поля объекта.
+> **Senior Note (Memory Leak):** Если внутренний класс живет дольше внешнего (например, вы передали его как callback в другой поток), внешний объект не будет удален сборщиком мусора (GC), пока жив внутренний. Это классический источник утечек памяти в Android и GUI-приложениях.
 
 ---
+## Local & Anonymous: Захват переменных
 
-## Builder Pattern — когда конструктор слишком сложный
+Эти классы определяются «на лету» внутри методов.
+
+### Effectively Final
+
+Вы замечали, что анонимный класс или лямбда не позволяют менять локальную переменную из метода?
 
 ```java
-// Телескопический конструктор — плохо:
-new Pizza("large", true, false, true, false, "mozarella", "tomato");
+int count = 0;
+Runnable r = () -> count++; // Ошибка компиляции!
+```
 
-// Builder — читаемо и безопасно:
-Pizza pizza = new Pizza.Builder("large")
+**Почему?** Переменная копируется внутрь объекта класса. Если бы она менялась в методе, копия внутри объекта стала бы неактуальной. Чтобы избежать рассинхрона и проблем с многопоточностью, Java требует, чтобы такие переменные были `final` или `effectively final` (не менялись после инициализации).
+
+### Anonymous vs Lambda
+
+Лямбды (Java 8+) почти полностью вытеснили анонимные классы для функциональных интерфейсов. Лямбды используют инструкцию `invokedynamic`, что зачастую быстрее и не плодит лишних `.class` файлов.
+
+---
+## Паттерн Builder: Прощай, Телескоп
+
+Когда у класса больше 5-6 параметров, конструкторы превращаются в «телескопы» (один вызывает другой с дефолтным значением). Это неудобно и легко ошибиться в порядке `boolean` флагов.
+
+**Решение — Builder:**
+
+- Использует **Static Nested Class**.
+    
+- Позволяет собирать объект пошагово.
+    
+- Гарантирует иммутабельность (поля в основном классе — `final`).
+
+```java
+// Fluent API в действии:
+Pizza pizza = new Pizza.Builder("Large")
     .cheese(true)
-    .pepperoni(false)
-    .mushrooms(true)
+    .pepperoni(true)
     .build();
-
-// Lombok @Builder — автогенерация:
-@Builder
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class Pizza {
-    private final String size;
-    private final boolean cheese;
-    private final boolean pepperoni;
-    // ... lombok генерирует Builder класс автоматически
-}
-```
-
-**Альтернатива для Java 16+** — `record` + compact constructor для валидации:
-```java
-record Pizza(String size, boolean cheese, boolean pepperoni) {
-    Pizza { if (size == null) throw new NullPointerException(); }
-}
-// Но record иммутабельный — Builder нужен когда объект строится постепенно
 ```
 
 ---
+## Вопросы на интервью (Interview Prep)
 
-## Вопросы на интервью
+1. **В чем разница между `static nested` и `inner` классами?**
+    
+    - _Ответ:_ `static nested` не имеет доступа к состоянию внешнего объекта и не хранит ссылку на него. `inner` имеет доступ ко всем полям (даже private) внешнего объекта через скрытую ссылку `this$0`.
 
-- Что такое `this$0`? В каком типе вложенных классов оно появляется?
-- Почему inner class может вызвать утечку памяти? Как избежать?
-- Почему лямбды предпочтительнее анонимных классов?
-- Что такое effectively final? Почему лямбда не может захватить изменяемую переменную?
-- Когда Builder предпочтительнее конструктора? Когда `record`?
+2. **Почему нельзя создать объект `Inner` класса без `Outer`?**
+    
+    - _Ответ:_ Потому что конструктору `Inner` нужна ссылка на экземпляр `Outer` для инициализации поля `this$0`.
+
+3. **Что такое синтетическое поле?**
+    
+    - _Ответ:_ Это поле, созданное компилятором, которое не прописано в исходном коде (например, та самая ссылка на внешний класс).
 
 ---
+## Подводные камни (Pitfalls)
 
-## Подводные камни
-
-- **Inner class в Android/Swing callbacks** — если Activity/Frame передаётся как контекст в long-lived inner class (Handler, AsyncTask) → утечка памяти. Используй `WeakReference` или static nested class.
-- **Анонимный класс захватывает this** — не только переменные, но и весь внешний объект. Даже `obj::method` метод-ссылка захватывает `obj`.
-- **Builder без валидации** — `build()` может вернуть объект в неполном состоянии если не все обязательные поля заполнены. Всегда валидируй в `build()`.
-- **`new Outer.Inner()` без экземпляра Outer** — `Outer.Inner inner = new Outer.Inner()` → ошибка компиляции. Нужен `new outerInstance.Inner()` или `outer.new Inner()`.
+- **Serialization:** Внутренние (non-static) классы очень плохо сериализуются из-за ссылки на внешний класс. Если планируете передавать объект по сети — делайте вложенный класс `static`.
+    
+- **Shadowing:** Если во внутреннем и внешнем классах есть поля с одинаковым именем, используйте `Outer.this.fieldName` для доступа к полю внешнего класса.
+    
+- **Builder Validation:** Всегда делайте валидацию данных в методе `build()`. Это ваш последний рубеж перед созданием потенциально некорректного объекта.
