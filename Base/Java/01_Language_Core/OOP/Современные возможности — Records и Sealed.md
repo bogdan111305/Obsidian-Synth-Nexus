@@ -1,232 +1,164 @@
-# Records и Sealed Classes
-
-> **Records** (Java 16+) — иммутабельные data-классы с автогенерацией equals/hashCode/toString/getters. **Sealed classes** (Java 17+) — закрытая иерархия (`permits`), исчерпывающий `switch`.
-
 ## Связанные темы
 
 [[Инкапсуляция]], [[Наследование]], [[Полиморфизм]], [[Современные возможности — Switch и Pattern Matching]]
 
 ---
 
-## Records (Java 14+)
+**Records, Sealed Classes и Pattern Matching** — это «святая троица» современной Java (версии 16–22). Вместе они реализуют концепцию **Data-Oriented Programming (DOP)** и привносят в язык мощь алгебраических типов данных (ADT), делая код безопаснее, лаконичнее и быстрее на уровне JVM.
 
-Records — это компактный способ объявления неизменяемых классов-«контейнеров» для данных.
+---
+## Records: Иммутабельные носители данных (Java 16+)
 
-**Пример:**
-```java
-public record Point(int x, int y) {}
+**Record** — это компактный класс-контейнер, чья единственная цель — прозрачно хранить неизменяемые данные.
 
-// Автогенерируется компилятором:
-// - Конструктор: Point(int x, int y)
-// - Аксессоры: int x(), int y()  (не getX() — именно x()!)
-// - equals(Object), hashCode(), toString()
+### Что генерирует компилятор
 
-Point p = new Point(1, 2);
-System.out.println(p.x()); // 1
-System.out.println(p);     // Point[x=1, y=2]
+Для записи `public record Point(int x, int y) {}` компилятор неявно создает `final` класс, наследующий `java.lang.Record`, и автоматически генерирует:
+
+- `private final` поля.
+    
+- **Canonical Constructor** (конструктор со всеми аргументами).
+    
+- **Аксессоры:** `x()` и `y()` (обратите внимание: не `getX()`, это осознанный уход от JavaBeans).
+    
+- **Методы `equals`, `hashCode`, `toString`:** Генерируются не через медленную рефлексию, а через инструкцию **`invokedynamic`**, что позволяет JVM оптимизировать их выполнение.
+
+### Компактный конструктор (Compact Constructor)
+
+Идеальное место для валидации или защитного копирования. Параметры в скобках не пишутся, а присваивание полей происходит неявно в конце:
+
+```
+public record Wrapper(List<String> items) {
+    public Wrapper {
+        if (items == null) throw new IllegalArgumentException();
+        items = List.copyOf(items); // Защита от мутации оригинального списка
+        // this.items = items; <-- компилятор добавит это сам
+    }
+}
 ```
 
-- Все компонентные поля `private final` — класс иммутабельный.
-- Не может `extends` другой класс (неявно `extends Record`), но может реализовывать интерфейсы.
-- Подходит для sealed-иерархий и Pattern Matching.
+### Безопасность десериализации
+
+В отличие от обычных классов, которые при десериализации создаются в обход конструктора (через «магию» `Unsafe`), Records **всегда** пропускают данные через Canonical Constructor. Это гарантирует, что невалидные данные никогда не попадут в объект.
+
+---
+## Sealed Classes: Запечатанные иерархии (Java 17+)
+
+Если интерфейсы раньше были открыты для всех, то **sealed-типы** вводят строгий фейсконтроль. Вы явно перечисляете классы, которым разрешено от вас наследоваться.
+
+### Синтаксис и правила
+
+```
+public sealed interface Shape permits Circle, Rectangle, Triangle {}
+
+public final class Circle    implements Shape { ... } // Дальше наследовать нельзя
+public sealed class Rectangle implements Shape permits Square { ... } // Продолжает закрытую ветку
+public non-sealed class Triangle implements Shape { ... } // Открывает иерархию для всех (escape hatch)
+```
+
+_Правило:_ Каждый класс в `permits` обязан выбрать один из трех модификаторов: `final`, `sealed` или `non-sealed`. (Записи/Records неявно `final`, поэтому для них модификатор писать не нужно).
+
+### Оптимизация JIT-компилятора (CHA)
+
+Благодаря метаданным `PermittedSubclasses`, JIT-компилятор использует **Class Hierarchy Analysis (CHA)**. Зная, что у `Shape` ровно три реализации, JVM может девиртуализировать вызовы методов и применить агрессивный инлайнинг (inlining), превращая полиморфные вызовы в прямые.
 
 ---
 
-## Records: Senior-уровень — что генерирует javac
+## 3. Pattern Matching: Механизм деструктуризации и проверок
 
-> [!INFO] Senior: понимание Records на уровне байт-кода
-> Records — не просто синтаксический сахар. Разберём что именно генерирует компилятор.
+Это клей, который объединяет Records и Sealed Classes в мощный инструмент бизнес-логики, избавляя нас от цепочек `instanceof` + кастование.
 
-```java
-// Исходник:
-public record Point(int x, int y) implements Comparable<Point> {
-    // Compact constructor (валидация без повторения полей)
-    public Point {
-        if (x < 0 || y < 0) throw new IllegalArgumentException("negative coords");
-        // this.x = x; this.y = y; — неявно добавляется компилятором в конец!
-    }
+### Pattern Matching for `instanceof` (Java 16)
 
-    // Кастомный accessor (переопределяем x()):
-    @Override
-    public int x() { return Math.abs(x); }  // можно, если нужно
+Переменная паттерна (pattern variable) автоматически кастуется, если проверка успешна.
 
-    // Статические фабричные методы — можно добавлять
-    public static Point origin() { return new Point(0, 0); }
+Java
 
-    // Можно реализовывать интерфейсы
-    @Override
-    public int compareTo(Point other) { return Integer.compare(x, other.x); }
+```
+// Классика:
+if (obj instanceof String s && s.length() > 5) {
+    System.out.println(s.toUpperCase()); 
+}
+
+// Трюк с инверсией (Negation Scope):
+if (!(obj instanceof String s)) {
+    return; // Если не String, выходим
+}
+System.out.println(s.toUpperCase()); // s доступна здесь!
+```
+
+### Pattern Matching in `switch` (Java 21)
+
+`switch` теперь умеет работать с любыми типами, а не только с числами, строками и enum.
+
+Java
+
+```
+String describe(Object obj) {
+    return switch (obj) {
+        case Integer i when i < 0 -> "Отрицательное число"; // Guard-условие (when)
+        case Integer i            -> "Положительное число"; // Общий case ниже специфичного
+        case String s             -> "Строка: " + s;
+        case null                 -> "Объект null";         // Явная обработка null!
+        default                   -> "Другой тип";
+    };
 }
 ```
 
-**Что генерирует javac (байт-код эквивалент):**
+### Record Patterns (Java 21) и Unnamed Patterns (Java 22)
 
-```java
-// Скомпилированный эквивалент (упрощённо):
-public final class Point extends java.lang.Record implements Comparable<Point> {
-    private final int x;  // private final — всегда!
-    private final int y;
+Главная магия — **деструктуризация**. Мы можем «разобрать» Record на составные части прямо в `switch` или `if`. Символ `_` (Java 22) позволяет игнорировать ненужные компоненты.
 
-    // Canonical constructor:
-    public Point(int x, int y) {
-        // super() — неявно вызывает Record()
-        if (x < 0 || y < 0) throw new IllegalArgumentException("negative coords");
-        this.x = x;  // неявно добавлено из compact constructor
-        this.y = y;
-    }
+Java
 
-    // Accessors (НЕ getX(), а именно x() — это контракт Record!):
-    public int x() { return Math.abs(x); }  // переопределён
-    public int y() { return this.y; }       // сгенерирован
-
-    // equals: использует invokedynamic + RecordComponents (не через reflection!)
-    // Это делает equals Records значительно быстрее рефлексивного equals
-    @Override public boolean equals(Object o) { /* invokedynamic */ }
-
-    // hashCode: аналогично через invokedynamic + bootstrap method
-    @Override public int hashCode() { /* invokedynamic */ }
-
-    // toString: "Point[x=1, y=2]" — через invokedynamic
-    @Override public String toString() { /* invokedynamic */ }
-}
 ```
-
-**Senior-нюансы Records:**
-
-```java
-// 1. Records и сериализация — Records реализуют Serializable корректно!
-//    При десериализации ВСЕГДА вызывается canonical constructor
-//    (в отличие от обычных классов где конструктор пропускается)
-public record Config(String host, int port) implements Serializable {}
-// Это БЕЗОПАСНО: валидация в constructor всегда выполняется
-
-// 2. Records с Generic:
-public record Pair<A, B>(A first, B second) {}
-Pair<String, Integer> p = new Pair<>("hello", 42);
-// Type erasure работает как обычно
-
-// 3. Records НЕ могут extends другой класс (кроме Record)
-// Records МОГУТ implements любые интерфейсы
-
-// 4. Records и Pattern Matching (Java 21):
-static void process(Object obj) {
-    if (obj instanceof Point(int x, int y)) {
-        // x и y — напрямую без obj.x()
-    }
-}
-
-// 5. Records как DTO в Spring (JSON через Jackson):
-// Jackson 2.12+ автоматически обнаруживает Record constructor
-// Не нужны @JsonProperty — имена компонентов = имена JSON полей
-@GetMapping("/point")
-public Point getPoint() {
-    return new Point(1, 2);  // → {"x":1,"y":2}
-}
-```
-
-> [!WARNING] Ловушка: Records не полностью иммутабельны
-> Если компонент — мутабельный объект, Record не защищает от изменений:
-> ```java
-> record Wrapper(List<String> items) {}
-> var w = new Wrapper(new ArrayList<>(List.of("a")));
-> w.items().add("b"); // РАБОТАЕТ! Поле final, но список мутабельный
-> // Fix: public record Wrapper(List<String> items) {
-> //     public Wrapper { items = List.copyOf(items); }  // defensive copy
-> // }
-> ```
-
----
-
-## Sealed-классы (Java 17+)
-
-Sealed-классы позволяют явно ограничить круг наследников класса или интерфейса.
-
-**Пример:**
-```java
-public sealed class Shape permits Circle, Rectangle {}
-public final class Circle extends Shape {}
-public final class Rectangle extends Shape {}
-```
-
-- Класс `Shape` может быть расширен только классами `Circle` и `Rectangle`.
-- Нарушение ограничения приведёт к ошибке компиляции.
-
-**Преимущества:**
-- Явный контроль иерархии
-- Безопасность при использовании pattern matching
-- Упрощение поддержки и рефакторинга
-- Компилятор может проверить исчерпывающий `switch` без `default`
-
----
-
-## Record Patterns (Java 21)
-
-Record Patterns расширяют pattern matching для деструктуризации Records:
-
-```java
 record Point(int x, int y) {}
 record Circle(Point center, double radius) {}
 
-// Java 16: instanceof с именованной переменной
-if (shape instanceof Point p) {
-    System.out.println(p.x() + ", " + p.y());
-}
-
-// Java 21: Record Pattern — деструктуризация в instanceof
-if (shape instanceof Point(var x, var y)) {
-    System.out.println(x + ", " + y); // x и y — напрямую
-}
-
-// Вложенные Record Patterns:
-if (shape instanceof Circle(Point(var x, var y), var r)) {
-    System.out.println("Center: " + x + ", " + y + ", radius: " + r);
-}
-```
-
-**Record Patterns в switch (Java 21):**
-
-```java
-static String describe(Object shape) {
+double process(Shape shape) {
     return switch (shape) {
-        case Point(var x, var y) -> "Point at (" + x + ", " + y + ")";
-        case Circle(Point(var x, var y), var r) ->
-            "Circle at (" + x + ", " + y + ") with radius " + r;
-        case null -> "null";
-        default -> "Unknown shape";
+        // Извлекаем только радиус, центр игнорируем (_)
+        case Circle(_, var r) when r > 0 -> Math.PI * r * r; 
+        
+        // Вложенная деструктуризация: достаем координаты x и y
+        case Circle(Point(var x, var y), _) -> x + y;       
+        
+        case Rectangle(var w, var h) -> w * h;
+        // default НЕ НУЖЕН! Иерархия Shape запечатана (sealed), 
+        // компилятор видит, что мы покрыли все варианты (Exhaustiveness check).
     };
 }
 ```
 
 ---
 
+## Вопросы на интервью (Senior Level)
+
+1. **Что такое "dominated by previous case" в `switch`?**
+    
+    - _Ответ:_ Это ошибка компиляции. Возникает, если вы поставите более общий кейс (например, `case Integer i`) **до** более специфичного (например, `case Integer i when i < 0`). Верхний перехватит всё, и нижний никогда не выполнится.
+        
+2. **Зачем нужен модификатор `non-sealed`? Разве он не ломает идею `sealed`?**
+    
+    - _Ответ:_ Он нужен как «предохранительный клапан». Например, у вас есть AST-дерево, где встроенные узлы запечатаны (`sealed`), а узел `CustomNode` сделан `non-sealed`, чтобы пользователи вашей библиотеки могли писать свои расширения.
+        
+3. **Можно ли изменить переменную паттерна (например, `s` в `obj instanceof String s`)?**
+    
+    - _Ответ:_ Нет, pattern variables неявно являются `effectively final`.
+        
+4. **Сработает ли Record Pattern `case Point(int x, int y)` если в `switch` передать `null`?**
+    
+    - _Ответ:_ Нет. Паттерны типов и Record-паттерны не матчат `null`. Для него нужно писать отдельный `case null`.
+        
+
 ---
 
-## Вопросы на интервью
+## Подводные камни (Pitfalls)
 
-- Что автоматически генерирует компилятор для Record? Почему `x()`, а не `getX()`?
-- Что такое compact constructor? Где неявно добавляется присваивание полей?
-- Почему Record нельзя унаследовать? Какой класс он неявно расширяет?
-- Как Records реализуют `equals`/`hashCode`? Что такое `invokedynamic` в этом контексте?
-- Почему Record с `List` внутри не полностью иммутабелен? Как это исправить?
-- Как Record ведёт себя при сериализации? Чем отличается от обычного класса?
-- Что такое Record Pattern? Как работает деструктуризация вложенных Records?
-- Что означают `final`, `sealed`, `non-sealed` для permits-классов?
-- Почему `sealed` позволяет убрать `default` из switch?
-- Как sealed-иерархия влияет на JIT (Class Hierarchy Analysis)?
-
-## Подводные камни
-
-- **Record не полностью иммутабелен** — если компонент мутабельный (`List`, массив), его можно изменить. Defensive copy в compact constructor: `items = List.copyOf(items)`.
-- **`x()`, не `getX()`** — accessor-методы Records называются по имени компонента без `get`. Jackson до 2.12 не умел это автоматически — нужен `@JsonProperty` или `@JsonAutoDetect`.
-- **Compact constructor не повторяет параметры** — `public Point { ... }` (без `(int x, int y)`). `this.x = x` добавляется компилятором **в конец** compact constructor неявно.
-- **Record нельзя `extends`** — `public record Foo(...) extends Bar` — compile error. Только `implements`.
-- **`sealed` требует `permits` в том же пакете/модуле** — нельзя разнести реализации по разным модулям без `opens`.
-- **`non-sealed` открывает иерархию** — любой класс может наследовать `non-sealed`-класс, даже если родитель `sealed`. Это намеренный escape hatch.
-- **Добавление нового permits-класса ломает switch без `default`** — compile error. Это фича: принудительное обновление логики обработки.
-
-## Связанные темы
-
-- [[Современные возможности — Switch и Pattern Matching]] — Pattern Matching instanceof и switch
-- [[Наследование]] — как Sealed-классы ограничивают иерархию
-- [[Интерфейсы]] — Sealed интерфейсы
-- [[Records]], [[Sealed Classes]], [[Pattern Matching]]
+- **NullPointerException в `switch`:** Раньше `switch` всегда бросал NPE при `null`. С появлением паттернов это поведение осталось для совместимости. Если вы передадите `null` в `switch` без явного `case null`, вы получите исключение.
+    
+- **Хрупкость Exhaustive Switch (Исчерпывающего свитча):** Если вы добавите новый класс в `permits` sealed-интерфейса, все `switch` без секции `default` по этому интерфейсу **перестанут компилироваться**. На самом деле это фича, а не баг — компилятор заставляет вас не забыть написать логику для нового класса.
+    
+- **List внутри Record:** Record гарантирует неизменность ссылок, но не содержимого. `record Wrapper(List<String> list)` позволит сделать `wrapper.list().add("хак")`. Всегда используйте `List.copyOf` в конструкторе и `Collections.unmodifiableList` (или просто возвращайте копию) в аксессоре.
+    
+- **Фреймворки и `x()`:** Старые версии библиотек (Jackson до 2.12, некоторые версии MapStruct или Hibernate) жестко завязаны на стандарт JavaBeans и ищут геттеры через `get...`. С Records они могут сломаться или потребовать дополнительных аннотаций (вроде `@JsonProperty` или `@JsonAutoDetect`).
