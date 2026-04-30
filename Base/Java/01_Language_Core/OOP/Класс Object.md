@@ -93,9 +93,7 @@ public Person(Person other) {
     
 - **Решение:** Используйте `try-with-resources` (`AutoCloseable`) или **Cleaner API**, если работаете с нативной памятью.
 
-
 ---
-
 ## Вопросы для самопроверки (Interview Prep)
 
 1. **Что будет, если `hashCode()` всегда возвращает `1`?**
