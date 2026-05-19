@@ -52,7 +52,7 @@ public enum TxType {
 
 ```java
 @Service
-public class JakartaEEService {
+public class   {
     
     @Transactional(TxType.REQUIRED)
     public void method1() {
