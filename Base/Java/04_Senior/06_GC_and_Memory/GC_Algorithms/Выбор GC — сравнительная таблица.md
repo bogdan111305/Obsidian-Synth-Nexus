@@ -16,7 +16,7 @@
 | [[Parallel и Serial GC\|Parallel]] | Максимальный среди "живых" GC | Minor: 50-200 мс; Full: 2-10 сек (heap 8 GB) | Любой, комфортно < 4 GB | Нет | Низкая | Batch/ETL, overnight reporting, throughput > latency |
 | [[G1GC — архитектура и tuning\|G1]] | Высокий | 10-200 мс (мягкая цель `MaxGCPauseMillis`) | 4-100 GB | Marking (Initial/Remark — короткие STW, само marking — concurrent) | Средняя | Default-выбор: web API, стандартные сервисы, смешанный workload |
 | [[Shenandoah GC\|Shenandoah]] | Высокий (немного ниже G1) | < 10 мс, на практике 1-5 мс | 4-64 GB | Marking + Evacuation + Update Refs — почти всё concurrent, 4 короткие STW-паузы | Средняя | Red Hat OpenJDK/Temurin, latency SLA < 10 мс, ZGC недоступен (Java 11/12) |
-| [[ZGC и Generational ZGC\|ZGC (Generational)]] | Высокий (~4x non-gen после Java 21) | < 1 мс независимо от heap | 8 MB — 16 TB | Marking + Relocation — почти всё concurrent, 3 STW-паузы <1 мс | Низкая (сильный автотюнинг) | Latency SLA < 10 мс, heap > 32 GB (где G1 деградирует) |
+| [[ZGC и Generational ZGC\|ZGC (Generational)]] | Высокий (обычно ~10% выше non-gen ZGC, на отдельных workload'ах — в разы) | < 1 мс независимо от heap | 8 MB — 16 TB | Marking + Relocation — почти всё concurrent, 3 STW-паузы <1 мс | Низкая (сильный автотюнинг) | Latency SLA < 10 мс, heap > 32 GB (где G1 деградирует) |
 
 ## Решающее дерево
 

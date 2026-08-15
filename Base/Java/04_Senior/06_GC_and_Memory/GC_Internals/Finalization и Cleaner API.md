@@ -1,6 +1,6 @@
 ﻿# Finalization и Cleaner API
 
-> **`finalize()`** — метод Object, вызываемый GC перед сборкой объекта для освобождения нативных ресурсов. Deprecated Java 9, removed Java 18+. **Cleaner API** (Java 9, `java.lang.ref.Cleaner`) — замена: безопасный, non-blocking, без воскрешения объектов.
+> **`finalize()`** — метод Object, вызываемый GC перед сборкой объекта для освобождения нативных ресурсов. Deprecated Java 9; deprecated **for removal** (JEP 421) в Java 18 — но физически из JDK метод пока не удалён (жив как минимум по Java 24). **Cleaner API** (Java 9, `java.lang.ref.Cleaner`) — замена: безопасный, non-blocking, без воскрешения объектов.
 
 ## Связанные темы
 [[GC Roots и достижимость объектов]], [[Reference Types (Weak, Soft, Phantom)]], [[Write Barriers и Card Table]]

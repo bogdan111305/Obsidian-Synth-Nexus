@@ -68,7 +68,7 @@ Concurrent Cleanup            — освободить старые регион
 | Heap overhead | ~2 слова на объект | Нет per-object overhead |
 | VA overhead | Нет triple-mapping | 3x VA space |
 | Доступность | OpenJDK + Red Hat | OpenJDK |
-| Generational | Нет (Java 21+: экспериментально) | Да (Java 21+) |
+| Generational | JEP 404 — experimental в JDK 24; JEP 521 перевёл в product (non-experimental) в JDK 25 | Да (Java 21+) |
 | Производительность | Сопоставимо с ZGC | Немного лучше на большом heap |
 
 ## Настройка
@@ -90,8 +90,9 @@ Concurrent Cleanup            — освободить старые регион
 # Concurrent threads
 -XX:ConcGCThreads=4
 
-# Отключить Generational (если нужен классический Shenandoah)
-# В Java 21 можно попробовать экспериментальный Generational
+# Generational Shenandoah: JEP 404 экспериментальный в JDK 24
+# (-XX:+UnlockExperimentalVMOptions -XX:ShenandoahGCMode=generational),
+# JEP 521 сделал его product-фичей (без experimental-флага) в JDK 25
 ```
 
 ## Диагностика
