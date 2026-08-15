@@ -5,6 +5,8 @@
 ## Связанные темы
 [[Foreign Function and Memory API]], [[JIT Compiler & Optimizations]], [[Panama vs Unsafe vs JNI]]
 
+> Отдельный JEP-трек внутри Project Panama (338/414/426/438/460/489), но про другое: не про вызов нативного кода или off-heap память (это [[Foreign Function and Memory API]]), а про SIMD-инструкции CPU внутри самой JVM.
+
 ---
 
 ## SIMD — что это
@@ -168,6 +170,15 @@ Vector API (AVX-512) ~12 ГБ/с   15x
 ```
 
 Vector API используется внутри JDK: `java.util.Base64`, некоторые String операции.
+
+## Интеграция с FFM API
+
+Вектор можно читать/писать прямо из/в off-heap память (`MemorySegment`), без промежуточного копирования в `float[]`/`byte[]` — полезно при SIMD-обработке данных из native-буфера (mmap-файл, сетевой буфер, полученный через [[Foreign Function and Memory API]]):
+
+```java
+FloatVector v = FloatVector.fromMemorySegment(SPECIES, segment, offset, ByteOrder.nativeOrder());
+v.mul(2.0f).intoMemorySegment(segment, offset, ByteOrder.nativeOrder());
+```
 
 ## JDK использует Vector API внутри
 

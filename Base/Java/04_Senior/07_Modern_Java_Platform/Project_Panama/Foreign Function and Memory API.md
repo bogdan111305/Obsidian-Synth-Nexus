@@ -188,6 +188,33 @@ static void onElement(int value) {
 }
 ```
 
+## Linker.Option — захват состояния вызова (errno)
+
+Некоторые нативные функции (POSIX `read`, `write`, `malloc` и т.д.) сообщают об ошибке через `errno`, а не через возвращаемое значение. Обычный downcall его не увидит: JVM между native-вызовом и возвратом в Java может выполнить свои системные вызовы, которые затрут `errno`. `Linker.Option.captureCallState` захватывает нужное thread-local состояние сразу после вызова:
+
+```java
+StructLayout capturedStateLayout = Linker.Option.captureStateLayout();
+VarHandle errnoHandle = capturedStateLayout.varHandle(PathElement.groupElement("errno"));
+
+Linker.Option ccs = Linker.Option.captureCallState("errno");
+MethodHandle read = linker.downcallHandle(
+    stdlib.find("read").orElseThrow(),
+    FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG),
+    ccs
+);
+
+try (Arena arena = Arena.ofConfined()) {
+    MemorySegment capturedState = arena.allocate(capturedStateLayout);
+    long result = (long) read.invoke(capturedState, fd, buf, count);
+    if (result < 0) {
+        int errno = (int) errnoHandle.get(capturedState, 0L);
+        throw new IOException("read failed, errno=" + errno);
+    }
+}
+```
+
+Другие полезные `Linker.Option`: `isTrivial()` (для очень коротких вызовов — пропускает переход в safepoint-safe состояние, но нельзя блокироваться/аллоцировать внутри), `critical()` (Java 22+, минимизирует overhead для hot-path вызовов, ограничивает что можно передавать).
+
 ## Производительность
 
 ```

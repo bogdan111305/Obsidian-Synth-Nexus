@@ -5,7 +5,7 @@
 
 ## Связанные темы
 
-[[Java Input-Output]], [[Virtual Threads — модель и архитектура]], [[ThreadPool, Future, Callable, Executors, CompletableFuture]]
+[[Java Input-Output]], [[Java Serialization and Deserialization]], [[JVM Profiling & Observability]], [[Virtual Threads — модель и архитектура]], [[ThreadPool, Future, Callable, Executors, CompletableFuture]]
 
 ## 1. NIO vs Traditional I/O
 
@@ -304,7 +304,7 @@ flowchart LR
         KB4 -->|"DMA → NIC"| NIC2["NIC"]
     end
 
-    style ZEROCOPY fill:#2d6a4f,color:#3d3d3d
+    style ZEROCOPY fill:#2d6a4f,color:#fff
 ```
 
 ### 5.1. transferTo в действии
@@ -514,10 +514,3 @@ client.setOption(StandardSocketOptions.SO_RCVBUF, 65536);    // recv buffer
 **Q5: Когда использовать AsynchronousSocketChannel vs SocketChannel с Selector?**
 
 > `SocketChannel + Selector`: один поток обрабатывает N каналов через event loop. Проблема: долгий обработчик блокирует весь Selector → latency spike для всех соединений. Подходит: протоколы с коротким временем обработки, высокие требования к latency. `AsynchronousSocketChannel`: OS уведомляет об I/O через callback (CompletionHandler) или Future. Обработчик выполняется в пуле потоков. Подходит: долгая обработка каждого соединения, удобнее программировать pipeline. На Linux AIO под капотом — Epoll (как и Selector), на Windows — IOCP (истинный async). Современная альтернатива: виртуальные потоки (Java 21) + обычный blocking I/O — простота блокирующего кода + масштабируемость NIO.
-
-## Связанные темы
-
-- [[Java Input-Output]] — базовый IO (InputStream/OutputStream)
-- [[Java Serialization and Deserialization]] — сериализация через каналы
-- [[JVM Profiling & Observability]] — профилирование I/O с JFR
-- [[ThreadPool, Future, Callable, Executors, CompletableFuture]] — async паттерны

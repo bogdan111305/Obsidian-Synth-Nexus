@@ -3,7 +3,7 @@
 > Platform Thread = OS thread (1:1, ~1MB стека, ~тысячи). Virtual Thread = JVM thread (M:N, ~KB стека, ~миллионы). Выбор: VT для I/O-bound, PT для CPU-bound и кода с pinning.
 
 ## Связанные темы
-[[Virtual Threads — модель и архитектура]], [[Carrier Threads и Pinning]], [[Процессы и Потоки, Thread, Runnable, состояния потоков]], [[ThreadPool, Future, Callable, Executors, CompletableFuture]]
+[[Virtual Threads — модель и архитектура]], [[Carrier Threads и Pinning]], [[ThreadLocal]], [[Процессы и Потоки, Thread, Runnable, состояния потоков]], [[ThreadPool, Future, Callable, Executors, CompletableFuture]]
 
 ---
 
@@ -94,18 +94,7 @@ spring:
 
 Смотреть в логах: `VirtualThread... pinned at ...`
 
-**Шаг 4 — заменить `synchronized` на `ReentrantLock`:**
-
-```java
-// Было (вызывает pinning):
-synchronized (resource) { doIO(); }
-
-// Стало (VT может демонтироваться внутри lock):
-private final ReentrantLock lock = new ReentrantLock();
-lock.lock();
-try { doIO(); }
-finally { lock.unlock(); }
-```
+**Шаг 4 — устранить pinning.** Найденные по логам `synchronized`-блоки с блокирующим I/O внутри нужно заменить на `ReentrantLock` (и `Object.wait()`/`notify()` — на `Condition`). Причины pinning, диагностика и полная стратегия исправления (включая JDBC-драйверы и JNI) — в [[Carrier Threads и Pinning]].
 
 ---
 

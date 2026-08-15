@@ -5,6 +5,8 @@
 ## Связанные темы
 [[Value Classes и Primitive Classes]], [[Object Identity — что меняется]], [[Интерфейс List]], [[Интерфейс Map]], [[Java Stream API]]
 
+> Эта заметка — про boxing, generics и коллекции (`ArrayList<Integer>`, `HashMap`, memory layout массивов). Identity-семантика (почему `IdentityHashMap` несовместим с value keys) — в [[Object Identity — что меняется]]. Сам синтаксис value/primitive classes — в [[Value Classes и Primitive Classes]].
+
 ---
 
 ## Проблема: Boxing в Generic Collections

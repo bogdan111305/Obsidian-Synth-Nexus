@@ -3,7 +3,7 @@
 > Снизить GC-паузы = уменьшить их частоту + продолжительность + time-to-safepoint. Три уровня: выбор GC, sizing heap/generations, оптимизация кода (меньше allocation, меньше promotion).
 
 ## Связанные темы
-[[JVM флаги для GC]], [[Анализ GC логов — JFR, GCEasy]], [[G1GC — архитектура и tuning]], [[ZGC и Generational ZGC]], [[Safepoints и Stop-The-World]]
+[[JVM флаги для GC]], [[Анализ GC логов — JFR, GCEasy]], [[G1GC — архитектура и tuning]], [[ZGC и Generational ZGC]], [[Safepoints и Stop-The-World]], [[Выбор GC — сравнительная таблица]]
 
 ---
 
@@ -33,6 +33,8 @@ Latency SLA 10-50 мс:    ZGC или Shenandoah
 Latency SLA < 10 мс:     ZGC (Generational, Java 21+)
 Latency SLA < 1 мс:      Epsilon + restart strategy (экстремально)
 ```
+
+Полная таблица throughput/latency/heap-size по всем GC — [[Выбор GC — сравнительная таблица]].
 
 ## Шаг 2: Диагностика текущих пауз
 

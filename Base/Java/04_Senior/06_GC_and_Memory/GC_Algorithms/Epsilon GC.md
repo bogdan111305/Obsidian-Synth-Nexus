@@ -3,7 +3,7 @@
 > **Epsilon GC** (JEP 318, Java 11, experimental → Java 17 production) — "no-op" GC: аллоцирует память, но **никогда не собирает мусор**. При исчерпании heap → `OutOfMemoryError`. Не для продакшена — для performance testing, short-lived jobs, latency benchmarking.
 
 ## Связанные темы
-[[G1GC — архитектура и tuning]], [[ZGC и Generational ZGC]], [[JVM флаги для GC]], [[Структура памяти JVM]]
+[[G1GC — архитектура и tuning]], [[ZGC и Generational ZGC]], [[JVM флаги для GC]], [[Структура памяти JVM]], [[Выбор GC — сравнительная таблица]]
 
 ---
 

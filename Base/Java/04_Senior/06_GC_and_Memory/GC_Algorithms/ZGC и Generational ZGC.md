@@ -124,6 +124,8 @@ Concurrent Relocate           — переместить объекты
 | Batch processing | ParallelGC (throughput) |
 | Стандартное приложение, heap 4-32 GB | G1 |
 
+Полная таблица по всем 6 GC и решающее дерево — [[Выбор GC — сравнительная таблица]].
+
 ## Ограничения
 
 - **Throughput**: ~5-15% ниже G1/Parallel из-за load barrier overhead

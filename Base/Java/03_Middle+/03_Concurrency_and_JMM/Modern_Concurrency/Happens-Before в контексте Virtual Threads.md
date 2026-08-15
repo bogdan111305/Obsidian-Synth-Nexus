@@ -3,7 +3,7 @@
 > JMM (Java Memory Model) полностью применяется к Virtual Threads: старт VT happens-before его первое действие, финализация VT happens-before `join()`. При перемонтировании на другой carrier гарантируется видимость всех предыдущих действий VT.
 
 ## Связанные темы
-[[Модель памяти Java (JMM) и барьеры памяти]], [[Virtual Threads — модель и архитектура]], [[Carrier Threads и Pinning]], [[Атомарность операций и Volatile]]
+[[Модель памяти Java (JMM) и барьеры памяти]], [[Virtual Threads — модель и архитектура]], [[Carrier Threads и Pinning]], [[Атомарность операций и Volatile]], [[ThreadLocal]]
 
 ---
 

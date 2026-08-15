@@ -3,7 +3,7 @@
 > Virtual Thread (Java 21, JEP 444) — лёгкий поток, управляемый JVM, а не ОС. Реализован через **continuation** (сохранение стека вызовов в heap) + **ForkJoinPool scheduler**. Позволяет создавать миллионы потоков без накладных расходов платформенных потоков.
 
 ## Связанные темы
-[[Процессы и Потоки, Thread, Runnable, состояния потоков]], [[Virtual Threads vs Platform Threads]], [[Carrier Threads и Pinning]], [[Happens-Before в контексте Virtual Threads]], [[Structured Concurrency]], [[Scoped Values (Java 21, JEP 446)]]
+[[Процессы и Потоки, Thread, Runnable, состояния потоков]], [[Virtual Threads vs Platform Threads]], [[Carrier Threads и Pinning]], [[Happens-Before в контексте Virtual Threads]], [[Structured Concurrency]], [[Scoped Values (Java 21, JEP 446)]], [[ThreadLocal]]
 
 ---
 
@@ -159,7 +159,7 @@ jcmd <pid> Thread.dump_to_file -format=json vt-dump.json
 ## Подводные камни
 
 - **CPU-bound задачи** — VT не ускоряют вычисления: если 4 carrier thread и 1M VT выполняют CPU-intensive код, работают только 4 параллельно. VT помогает только при I/O-bound нагрузке.
-- **ThreadLocal в VT** — работает, но дорого: каждый из 1M VT создаёт свой ThreadLocal. При большом количестве VT это memory overhead. Предпочитай [[Scoped Values (Java 21, JEP 446)]].
+- **ThreadLocal в VT** — работает корректно (детали устройства и почему именно с VT он стал проблемой — [[ThreadLocal]]), но дорого: каждый из 1M VT создаёт свой ThreadLocal. При большом количестве VT это memory overhead. Предпочитай [[Scoped Values (Java 21, JEP 446)]].
 - **`synchronized` блокирует carrier** — пока VT в `synchronized` блоке, carrier не освобождается → pinning. Подробнее: [[Carrier Threads и Pinning]].
 - **Нельзя задать приоритет** — `Thread.setPriority()` для VT игнорируется.
 - **daemon-статус по умолчанию** — VT всегда daemon thread. JVM не будет ждать их завершения при остановке. Используй `structured concurrency` или явное ожидание.

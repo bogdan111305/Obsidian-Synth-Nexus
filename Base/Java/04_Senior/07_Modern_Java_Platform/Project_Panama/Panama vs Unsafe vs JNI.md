@@ -5,6 +5,8 @@
 ## Связанные темы
 [[Foreign Function and Memory API]], [[Структура памяти JVM]], [[Java Agents & Instrumentation API]]
 
+> Эта заметка — decision-making: чем FFM лучше JNI/Unsafe и когда что выбирать. Полная механика `MemorySegment`/`Arena`/`Linker` с кодом — в [[Foreign Function and Memory API]], здесь код не дублируется.
+
 ---
 
 ## JNI (Java Native Interface)
@@ -99,25 +101,9 @@ unsafe.fullFence();   // = все
 
 ## FFM API (Panama) — правильный путь
 
-```java
-// Замена JNI для вызова нативных функций
-// Замена Unsafe для off-heap памяти
-
-// Off-heap (замена Unsafe.allocateMemory):
-try (Arena arena = Arena.ofConfined()) {
-    MemorySegment seg = arena.allocate(1024);
-    seg.set(ValueLayout.JAVA_INT, 0, 42);
-    // Нет bounds violation — автоматическая проверка
-    // Нет memory leak — Arena закрывается в try-with-resources
-}
-
-// Native function call (замена JNI):
-Linker linker = Linker.nativeLinker();
-MethodHandle printf = linker.downcallHandle(
-    linker.defaultLookup().find("printf").orElseThrow(),
-    FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS)
-);
-```
+FFM закрывает обе проблемы разом одним набором абстракций (`MemorySegment`/`Arena`/`Linker`, детали — в [[Foreign Function and Memory API]]):
+- **вместо `Unsafe.allocateMemory`/`freeMemory`** — off-heap память получает bounds-check при каждом доступе и детерминированное освобождение через `Arena` (try-with-resources), а не ручной `free`;
+- **вместо JNI** — вызов нативной функции через `Linker.downcallHandle` не требует ни `.so`-обёртки на C, ни `javah`, ни ручного управления local/global JNI-ссылками.
 
 ## Сравнительная таблица
 
