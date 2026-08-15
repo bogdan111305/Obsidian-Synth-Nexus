@@ -3,6 +3,68 @@
 [[Java Stream API & Functional Programming]], [[Интерфейсы]], [[MethodHandle & LambdaMetafactory]]
 
 ---
+## Основы дженериков
+
+**Зачем нужны (Java 5+):** до дженериков коллекции хранили `Object`, и каждый `get()` требовал ручной каст с риском `ClassCastException` в рантайме. Дженерики переносят проверку типов на этап компиляции — несовместимость типов ловится сразу, а не после падения в проде.
+
+### Обобщённый класс/интерфейс
+
+```java
+class Box<T> {
+    private T value;
+    public void set(T value) { this.value = value; }
+    public T get() { return value; }
+}
+
+Box<String> box = new Box<>();
+box.set("hello");
+String s = box.get(); // без каста
+```
+
+- `T` — параметр типа (конвенция: `T` — Type, `E` — Element, `K`/`V` — Key/Value, `R` — Result).
+- Параметров может быть несколько: `class Pair<K, V> { ... }`.
+
+### Обобщённый метод
+
+Параметр типа объявляется перед возвращаемым типом — метод может быть generic даже в обычном классе:
+
+```java
+static <T> T firstOrDefault(List<T> list, T def) {
+    return list.isEmpty() ? def : list.get(0);
+}
+
+Integer x = firstOrDefault(List.of(1, 2, 3), 0);
+```
+
+### Bounded type parameters (ограничение типа)
+
+```java
+class NumberBox<T extends Number> {
+    private T value;
+    double asDouble() { return value.doubleValue(); } // доступны методы Number
+}
+```
+
+- `T extends Number` — верхняя граница: `T` должен быть `Number` или его наследником (для интерфейсов тоже пишется `extends`, не `implements`).
+- Без ограничения `T` эквивалентен `Object` — доступны только его методы.
+
+### Wildcards — база
+
+- `List<?>` — список неизвестного типа (unbounded wildcard). Читать можно только как `Object`, писать нельзя (кроме `null`).
+- `List<? extends T>` / `List<? super T>` — ограниченные wildcard'ы, детальный разбор в PECS ниже.
+
+### Raw Types — почему их избегают
+
+```java
+List list = new ArrayList();     // raw type — без параметра
+list.add("string");
+list.add(42);                    // компилируется, но логическая ошибка
+String s = (String) list.get(1); // ClassCastException в рантайме
+```
+
+Raw types сохранены только ради обратной совместимости с до-generic кодом (Java 1.4-). В новом коде так писать нельзя — компилятор не просто так выдаёт unchecked-warning.
+
+---
 ## Глубокое погружение в Type Erasure и байт-код
 
 **Type Erasure** — это не просто удаление типов, это сложная трансформация кода для сохранения бинарной совместимости.
@@ -58,7 +120,7 @@
 
 Компилятор незаметно добавляет в ваш класс метод:
 
-```
+```java
 // Генерируется компилятором (Synthetic)
 public int compareTo(Object other) {
     return compareTo((MyClass) other); // Вызов вашего метода с кастом
@@ -74,7 +136,7 @@ public int compareTo(Object other) {
 
 Рассмотрим код, который не компилируется:
 
-```
+```java
 void foo(List<?> list) {
     list.set(0, list.get(0)); // Compile Error
 }
@@ -84,7 +146,7 @@ void foo(List<?> list) {
 
 **Решение (Helper Pattern):**
 
-```
+```java
 public void foo(List<?> list) {
     fooHelper(list);
 }
@@ -103,7 +165,7 @@ private <T> void fooHelper(List<T> list) {
 
 Если создать анонимный подкласс `new TypeReference<List<String>>() {}`, то информация о родительском типе сохраняется в метаданных этого подкласса.
 
-```
+```java
 abstract class TypeReference<T> {
     private final Type type;
     protected TypeReference() {
@@ -141,4 +203,25 @@ abstract class TypeReference<T> {
 
 **Best Practice:** При использовании `@SafeVarargs` вы берете на себя ответственность, что не будете делать опасных приведений типов с массивом аргументов.
 
-Какая из этих тем — захват Wildcard или метаданные в Metaspace — кажется вам наиболее «тонким» моментом при проектировании библиотечного кода?</List
+---
+## Вопросы на интервью
+
+- Зачем нужны дженерики, если можно было обойтись `Object` и кастами?
+- Что такое Type Erasure? Что происходит с типами после компиляции?
+- Чем Signature Attribute отличается от Descriptor в байт-коде?
+- Могут ли сосуществовать перегрузки `m(List<String>)` и `m(List<Integer>)`? Почему нет?
+- Сформулируй правило PECS. Почему `? extends T` — Producer, а `? super T` — Consumer?
+- Что такое Bridge Method и зачем он нужен при реализации `Comparable<T>`?
+- Почему `list.set(0, list.get(0))` не компилируется для `List<?>`? Как обойти через Helper Pattern?
+- Как работает Super Type Token (Gafter's Gadget)? Где это используется в реальных библиотеках?
+- Почему нельзя создать `new T[10]`? Что такое Heap Pollution?
+- Что делает `@SafeVarargs` и какую ответственность берёт на себя разработчик?
+
+## Подводные камни
+
+- **Raw Types в новом коде** — обходят проверку типов компилятором, приводят к `ClassCastException` в рантайме на `checkcast`. Используй параметризованные типы или `<?>`, но не raw.
+- **Overloading после Erasure** — методы, различающиеся только параметром типа дженерика, после стирания получают одинаковый Descriptor → compile error "erasure of method is the same as another method".
+- **`? extends` не даёт писать** — попытка `list.add(x)` в `List<? extends T>` (кроме `add(null)`) — ошибка компиляции, компилятор не может гарантировать совместимость.
+- **TypeReference в цикле/на каждый запрос** — каждый `new TypeReference<X>() {}` создаёт новый анонимный класс. Динамическая генерация в hot path — риск Metaspace leak, классы оттуда выгружаются неохотно.
+- **Множественные bounds и стирание** — `<T extends Number & Comparable<T>>` стирается до **первого** типа (`Number`). Порядок в объявлении не косметический.
+- **Bridge-методы и Reflection** — `getDeclaredMethods()` возвращает и синтетический bridge-метод, и «настоящий». Фильтруй через `method.isBridge()`, иначе логика фреймворка/маппера выполнится дважды.
