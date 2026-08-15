@@ -49,6 +49,7 @@ static final int hash(Object key) {
 Map<String, Data> map = new HashMap<>((int)(n / 0.75) + 1);
 // Или: Guava Maps.newHashMapWithExpectedSize(n)
 ```
+Формула следует прямо из условия resize (`size > capacity * 0.75`): чтобы вместить `n` элементов без единого resize, нужно `capacity ≥ n / 0.75`. Без этого при заполнении дефолтной `HashMap` (capacity=16) на n=1000 элементов произойдёт ~7 resize'ов, каждый — полный rehash O(n).
 
 ---
 
@@ -159,17 +160,6 @@ map.firstKey() / map.lastKey();
 map.pollFirstEntry() / map.pollLastEntry(); // извлечь и удалить
 map.descendingMap();  // обратный порядок — view!
 ```
-
----
-
-## Вопросы на интервью
-
-- Как HashMap вычисляет индекс бакета? Зачем нужен `h ^ (h >>> 16)`?
-- Почему loadFactor = 0.75? При каком условии происходит treeification?
-- Что такое Hash Collision DoS атака? Как Java 8 от неё защищается?
-- Чем ConcurrentHashMap Java 8 отличается от Java 7?
-- Почему `ConcurrentHashMap.size()` не точный?
-- Что произойдёт если изменить ключ HashMap после `put()`?
 
 ---
 
