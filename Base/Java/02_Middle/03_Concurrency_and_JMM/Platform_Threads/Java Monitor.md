@@ -41,7 +41,7 @@ Mark Word (64-bit JVM):
 
 UNLOCKED:    | hashcode (31 bit) | age (4) | 0 | 01 |
 THIN LOCK:   | ptr to LockRecord in thread stack (62 bit) | 00 |
-HEAVY LOCK:  | ptr to ObjectMonitor in Heap (62 bit)      | 10 |
+HEAVY LOCK:  | ptr to ObjectMonitor in native (C) heap (62 bit) | 10 |
 GC MARK:     | forwarding address                         | 11 |
 ```
 
@@ -57,7 +57,7 @@ GC MARK:     | forwarding address                         | 11 |
    → другой поток пытается захватить → adaptive spin (несколько итераций)
    → spin не помог → inflate → HEAVY LOCK
 
-3. HEAVY LOCK (10): ObjectMonitor в Heap
+3. HEAVY LOCK (10): ObjectMonitor в native (C) heap, вне управляемой GC Java-кучи
    → ObjectMonitor: {owner, EntryList, WaitSet, count}
    → конкурирующие потоки → EntryList → Thread.State.BLOCKED
    → wait() → перемещает поток в WaitSet → Thread.State.WAITING

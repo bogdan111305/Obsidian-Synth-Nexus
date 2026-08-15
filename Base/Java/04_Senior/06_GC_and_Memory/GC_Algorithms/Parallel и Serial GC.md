@@ -72,7 +72,7 @@ After Minor GC:
 
 ```bash
 # Количество GC потоков
--XX:ParallelGCThreads=8  # default = nCPU если <= 8, иначе nCPU*5/8
+-XX:ParallelGCThreads=8  # default = nCPU если <= 8, иначе 8 + (nCPU-8)*5/8
 
 # Цель по throughput (99% времени в приложении, 1% в GC)
 -XX:GCTimeRatio=99  # default 99 → не более 1% в GC

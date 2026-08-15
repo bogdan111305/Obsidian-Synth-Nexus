@@ -196,7 +196,7 @@ Semaphore не имеет понятия владельца — любой по�
 | Многофазность | ❌ | ✅ (вручную) | ✅ (встроено) | ❌ |
 | barrierAction / onAdvance | ❌ | ✅ | ✅ | ❌ |
 | Семантика | N-to-M | N-to-N | N-to-N + управление | Resource limit |
-| Под капотом | AQS shared | RLock + Condition | AQS + CAS long | AQS shared |
+| Под капотом | AQS shared | RLock + Condition | Собственный volatile long state + CAS (НЕ AQS — Phaser не наследует AbstractQueuedSynchronizer) | AQS shared |
 
 **Когда что выбирать:**
 - `CountDownLatch` — одноразовое ожидание инициализации / завершения N задач

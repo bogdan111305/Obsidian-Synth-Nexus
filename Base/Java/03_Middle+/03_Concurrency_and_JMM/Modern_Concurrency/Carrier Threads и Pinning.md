@@ -40,6 +40,9 @@ Pinning — VT "приклеен" к carrier и не может демонтир
 
 ### Причины Pinning
 
+> [!NOTE] Актуально для Java ≤23
+> Начиная с Java 24 (JEP 491, финальная фича, без preview-стадии) причина №1 ниже — `synchronized` — **больше не вызывает pinning**: монитор JVM переписан так, что привязан к virtual thread, а не к carrier. На Java 24+ этот раздел описывает только legacy-поведение старых версий; актуальны остаются причины №3 (JNI) и №4 (finalizer).
+
 **1. `synchronized` блок/метод с блокирующей операцией:**
 
 ```java
@@ -182,4 +185,4 @@ ExecutorService jdbcExecutor = Executors.newFixedThreadPool(50);
 - **Spring `@Transactional` + VT** — `@Transactional` держит соединение на протяжении метода. Если метод блокирующий + JDBC с pinning → carrier заблокирован всё время транзакции.
 - **JVM создаёт компенсирующие carrier** — при долгом pinning JVM создаёт дополнительные carrier (до maxPoolSize=256). Это маскирует проблему, но не решает — 256 заблокированных PT = старый мир.
 - **`-Djdk.tracePinnedThreads` имеет overhead** — не включай в production постоянно. Только для диагностики.
-- **`Object.wait()` без pinning в Java 24+** — начиная с Java 24 JEP 491 улучшает ситуацию: `synchronized` методы/блоки больше не вызывают pinning (preview в Java 23). Проверяй версию JDK.
+- **`Object.wait()` без pinning в Java 24+** — JEP 491 ("Synchronize Virtual Threads without Pinning") переписывает реализацию монитора JVM так, что он привязан к virtual thread, а не к carrier — `synchronized`-блоки и методы, а также `Object.wait()`, больше не вызывают pinning. Доставлен сразу как финальная фича в Java 24 (таргетирован сразу на JDK 24, без отдельной preview-стадии в Java 23). Проверяй версию JDK: код, написанный в расчёте на pinning от `synchronized`, актуален только для Java ≤23.

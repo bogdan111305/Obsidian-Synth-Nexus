@@ -109,7 +109,7 @@ class VirtualThread extends Thread {
 
 ## Scheduler — ForkJoinPool
 
-По умолчанию: `ForkJoinPool.commonPool()` с `parallelism = Runtime.getRuntime().availableProcessors()`
+По умолчанию: **отдельный, выделенный** `ForkJoinPool` в **FIFO**-режиме, с `parallelism = Runtime.getRuntime().availableProcessors()`. Это **не** `ForkJoinPool.commonPool()` — JEP 444 явно разделяет их: common pool (LIFO-режим, используется для parallel streams и `CompletableFuture`) и scheduler виртуальных потоков — два разных пула, чтобы блокирующие VT-задачи не конкурировали с CPU-bound задачами common pool.
 
 ```java
 // Настройка:

@@ -9,7 +9,7 @@
 
 ## JMM-гарантии для Virtual Threads
 
-JEP 425 (Virtual Threads) явно специфицирует happens-before отношения:
+JEP 444 (Virtual Threads, final, Java 21) явно специфицирует happens-before отношения (унаследовано без изменений с первого preview — JEP 425, Java 19):
 
 | Событие | Happens-Before |
 |---|---|

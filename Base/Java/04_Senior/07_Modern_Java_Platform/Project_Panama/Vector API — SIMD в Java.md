@@ -1,11 +1,11 @@
 # Vector API — SIMD в Java
 
-> **Vector API** (JEP 338/414/426/438/460/489, Java 16-24, Incubator → Preview) позволяет писать Java код, который JIT компилирует в **SIMD инструкции** (SSE, AVX, AVX-512, ARM NEON). Обрабатывает несколько элементов за одну CPU инструкцию — до 16x ускорение для числодробилок.
+> **Vector API** (JEP 338 → JEP 529, Java 16-26, уже 11 раундов Incubator; JEP 537 — 12-й раунд, таргет Java 27) позволяет писать Java код, который JIT компилирует в **SIMD инструкции** (SSE, AVX, AVX-512, ARM NEON). Статус остаётся Incubator — API ни разу не переходил в Preview, финализация ждёт готовности примитивов Valhalla. Обрабатывает несколько элементов за одну CPU инструкцию — до 16x ускорение для числодробилок.
 
 ## Связанные темы
 [[Foreign Function and Memory API]], [[JIT Compiler & Optimizations]], [[Panama vs Unsafe vs JNI]]
 
-> Отдельный JEP-трек внутри Project Panama (338/414/426/438/460/489), но про другое: не про вызов нативного кода или off-heap память (это [[Foreign Function and Memory API]]), а про SIMD-инструкции CPU внутри самой JVM.
+> Отдельный JEP-трек внутри Project Panama (JEP 338 → 414 → 417 → 426 → 438 → 448 → 460 → 469 → 489 → 508 → 529, актуально на 2026 — JEP 529/Java 26, следующий JEP 537 таргетирован на Java 27), но про другое: не про вызов нативного кода или off-heap память (это [[Foreign Function and Memory API]]), а про SIMD-инструкции CPU внутри самой JVM.
 
 ---
 
@@ -160,7 +160,8 @@ Vector API (AVX-512) ~12 ГБ/с   15x
 ## Статус и использование
 
 ```java
-// Java 22-24: Incubator module
+// Java 16-27: всё ещё Incubator module (на 2026 — JEP 529, 11-й раунд, Java 26;
+// JEP 537, 12-й раунд, таргетирован на Java 27)
 // Нужен флаг при компиляции и запуске:
 // javac --add-modules jdk.incubator.vector MyClass.java
 // java  --add-modules jdk.incubator.vector MyClass
@@ -169,7 +170,7 @@ Vector API (AVX-512) ~12 ГБ/с   15x
 // <compilerArgs><arg>--add-modules</arg><arg>jdk.incubator.vector</arg></compilerArgs>
 ```
 
-Vector API используется внутри JDK: `java.util.Base64`, некоторые String операции.
+Нужно не путать с публичным Vector API: сам JDK (Base64, Arrays.mismatch и др.) использует SIMD через отдельные hand-written C2 intrinsics, не через `jdk.incubator.vector` — см. ниже.
 
 ## Интеграция с FFM API
 
@@ -180,11 +181,13 @@ FloatVector v = FloatVector.fromMemorySegment(SPECIES, segment, offset, ByteOrde
 v.mul(2.0f).intoMemorySegment(segment, offset, ByteOrder.nativeOrder());
 ```
 
-## JDK использует Vector API внутри
+## SIMD внутри JDK — не через публичный Vector API
 
-- `java.util.Base64` — JDK 17+ использует Vector API для encode/decode
-- String indexOf (некоторые реализации)
-- `Arrays.mismatch`
+- `java.util.Base64` — `encodeBlock`/`decodeBlock` являются intrinsic candidates для C2 с Java 11/16 соответственно; JIT подставляет hand-written SIMD-реализацию напрямую в HotSpot, это не вызов `jdk.incubator.vector`
+- String indexOf (некоторые реализации) — тот же механизм: built-in C2 intrinsic
+- `Arrays.mismatch` — аналогично, `VectorizedMismatch` intrinsic
+
+Публичный incubator Vector API — отдельный, самостоятельный механизм для прикладного кода; он не является тем, на чём построены эти внутренние intrinsics JDK.
 
 ---
 

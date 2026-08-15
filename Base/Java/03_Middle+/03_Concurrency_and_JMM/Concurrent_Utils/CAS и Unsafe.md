@@ -85,7 +85,7 @@ while ((witness = HEAD_VH.compareAndExchange(this, expected, newNode)) != expect
 
 ## VarHandle vs Unsafe
 
-`sun.misc.Unsafe` — нестабильный internal API. С Java 9 требует `--add-opens`, с Java 17 — предупреждения при доступе через рефлексию. **Не использовать в новом коде.**
+`sun.misc.Unsafe` — нестабильный internal API. В отличие от большинства internal API, `--add-opens` для него НЕ требуется: JEP 403 (Strongly Encapsulate JDK Internals, Java 17) явно исключил `sun.misc.Unsafe` из строгой инкапсуляции как «critical internal API» — слишком много кода на нём завязано. Реальный путь устаревания другой: JEP 471 (Java 23) депрекейтит memory-access методы для удаления (compile-time warning, runtime-флаг `--sun-misc-unsafe-memory-access={allow|warn|debug|deny}`, по умолчанию `allow`); JEP 498 (Java 24) меняет значение по умолчанию на `warn` — теперь предупреждение при первом использовании выводится из коробки. **Не использовать в новом коде.**
 
 `VarHandle` (Java 9+) — стабильная замена (семантика барьеров каждого режима ordering — в [[Модель памяти Java (JMM) и барьеры памяти]]):
 
@@ -208,7 +208,7 @@ if (seen != null) {
 - Что такое spurious failure? На каких архитектурах возникает и почему?
 - Чем `compareAndExchange` лучше `compareAndSet`? Приведи пример.
 - Почему `weakCompareAndSet` быстрее на ARM?
-- Почему нельзя использовать `Unsafe` в Java 17+? Чем заменить?
+- Почему `Unsafe` считается устаревшим начиная с Java 23+ (хотя формально доступен без `--add-opens`)? Чем заменить?
 - Что такое False Sharing? Как `LongAdder` с ним борется?
 - Создаёт ли неуспешный CAS happens-before?
 - В чём ABA-проблема в lock-free стеке? Как исправить?
@@ -220,4 +220,4 @@ if (seen != null) {
 - **False Sharing** — `volatile long a; volatile long b;` рядом = одна cache line = деградация производительности. Используй `@Contended` или `LongAdder`.
 - **Неуспешный CAS не создаёт HB** — нельзя использовать как барьер при промахе.
 - **ABA в структурах с переиспользованием узлов** — `AtomicReference` не защищает. Нужен `AtomicStampedReference`.
-- **`Unsafe` в Java 17+** — требует `--add-opens` и генерирует warning. В Java 21+ планируется к ограничению. Мигрируй на `VarHandle`.
+- **`Unsafe` статус по версиям** — `--add-opens` НЕ требуется (critical internal API, исключён из JEP 403). Реальные вехи: Java 23 (JEP 471) — deprecated for removal; Java 24 (JEP 498) — runtime warning по умолчанию при первом использовании memory-access методов. Мигрируй на `VarHandle` (или Foreign Function & Memory API для off-heap).

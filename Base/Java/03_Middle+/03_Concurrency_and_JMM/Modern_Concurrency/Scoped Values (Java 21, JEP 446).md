@@ -3,6 +3,9 @@
 > **ScopedValue** — иммутабельная замена `ThreadLocal` для виртуальных потоков. `ThreadLocal` накапливает утечки при миллионах virtual threads. `ScopedValue.where(KEY, value).run(task)` — данные доступны только в scope, без наследования мусора.
 > На интервью: почему ThreadLocal плох с virtual threads, как работает rebinding, как ScopedValue наследуется без копирования, когда ThreadLocal всё ещё нужен.
 
+> [!NOTE] Статус: финализирован в Java 25
+> JEP 446 (Java 21) был лишь первым preview. Полная цепочка: JEP 429 (incubator, Java 20) → JEP 446 (preview, Java 21) → JEP 464 (2nd preview, Java 22) → JEP 481 (3rd preview, Java 23) → JEP 487 (4th preview, Java 24) → **JEP 506 (final, Java 25)**. Единственное изменение при финализации: `ScopedValue.orElse(...)` больше не принимает `null` в качестве аргумента. Заголовок заметки ссылается на исходный preview JEP (446) по историческим причинам обратной совместимости wiki-ссылок — фактический текущий статус фичи см. в этой заметке.
+
 ## Связанные темы
 [[Процессы и Потоки, Thread, Runnable, состояния потоков]], [[Structured Concurrency]], [[ThreadPool, Future, Callable, Executors, CompletableFuture]], [[ThreadLocal]], [[Virtual Threads — модель и архитектура]]
 
@@ -116,7 +119,7 @@ String fetchFromDatabase() {
 | Наследование | `InheritableThreadLocal` (O(n) копирование) | Автоматически (O(1) sharing) |
 | Virtual Threads | Проблемы с памятью (1M копий Map) | Эффективно |
 | Утечки в thread pool | Частая проблема | Невозможны |
-| Java версия | Java 1.2 | Java 21 (stable) |
+| Java версия | Java 1.2 | Java 21 (preview, JEP 446) → Java 25 (final, JEP 506) |
 
 ---
 
