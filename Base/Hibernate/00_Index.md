@@ -1,6 +1,6 @@
 # Hibernate — индекс по уровням
 
-> Структура — `02_Middle/ 03_Middle+/ 04_Senior/`, внутри сохранены прежние пронумерованные разделы. Уровня Junior для Hibernate нет — [`LEARNING_ROADMAP.md`](../../../LEARNING_ROADMAP.md) §2.5 вводит тему только с Middle.
+> Структура — `02_Middle/ 03_Middle+/ 04_Senior/`, внутри сохранены прежние пронумерованные разделы. Уровня Junior для Hibernate нет — [`LEARNING_ROADMAP.md`](file:///C:/Users/brubc/OpenideProjects/digital-bunker-yandex-storage/LEARNING_ROADMAP.md) §2.5 вводит тему только с Middle. (Файл — в отдельном репозитории `digital-bunker-yandex-storage`, не в этом vault'е.)
 
 | Уровень | Раздел | Путь |
 |---|---|---|
@@ -12,6 +12,6 @@
 | **03_Middle+** | 5. Transactions & Locks (propagation, optimistic/pessimistic locks) | `03_Middle+/5. Transactions & Locks/` |
 | | 8. Second Level Cache (regions, query cache, конфигурация) | `03_Middle+/8. Second Level Cache/` |
 | **04_Senior** | 6. Event Listeners and Callbacks (Hibernate internals, extensibility) | `04_Senior/6. Event Listeners and Callbacks/` |
-| | 7. Hibernate Envers (аудит — см. связь с `audit_log` в [`CLAUDE.md`](../../../CLAUDE.md)) | `04_Senior/7. Hibernate Envers/` |
+| | 7. Hibernate Envers (аудит — см. связь с `audit_log` в [`CLAUDE.md`](file:///C:/Users/brubc/OpenideProjects/digital-bunker-yandex-storage/CLAUDE.md)) | `04_Senior/7. Hibernate Envers/` |
 
-Подробности по каждому разделу — в дальнейшем можно расписать по аналогии с [`Base/Java/00_Index/README.md`](../Java/00_Index/README.md#).
+Подробности по каждому разделу — в дальнейшем можно расписать по аналогии с [`Base/Java/00_Index/README.md`](../Java/00_Index/README.md).
