@@ -199,7 +199,7 @@ v.mul(2.0f).intoMemorySegment(segment, offset, ByteOrder.nativeOrder());
 - В каких задачах Vector API даёт максимальный эффект?
 
 ## Подводные камни
-- Vector API — Incubator/Preview на 2026. API может измениться между версиями Java
+- Vector API — на 2026 год всё ещё только Incubator (никогда не был Preview): 11 раундов инкубации (JEP 529 в Java 26), 12-й раунд (JEP 537) таргетирован на Java 27. Финализация ждёт готовности примитивов Valhalla, сроки не определены. API может измениться между версиями Java
 - Эффект заметен только на больших данных (>10K элементов) — иначе overhead initialization перевешивает
 - `SPECIES_PREFERRED` — JVM выбирает под текущий CPU. На одном сервере может быть 512-bit, на другом 128-bit — разная производительность
 - Неправильный `loopBound` + пропущенный scalar tail → ArrayIndexOutOfBoundsException или обработка не всех данных

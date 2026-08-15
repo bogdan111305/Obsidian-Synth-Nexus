@@ -83,9 +83,9 @@ Concurrent Cleanup            — освободить старые регион
 -XX:ShenandoahGCHeuristics=compact    # минимальный footprint
 -XX:ShenandoahGCHeuristics=static     # фиксированный порог
 
-# Порог для GC (% heap до начала GC цикла)
--XX:ShenandoahInitFreeThreshold=75  # начать GC если free > 75%
--XX:ShenandoahMinFreeThreshold=10   # срочный GC если free < 10%
+# Пороги свободной памяти (в % от soft max heap), триггерящие GC-цикл
+-XX:ShenandoahInitFreeThreshold=70  # default 70 — learning-цикл, если свободно < 70%
+-XX:ShenandoahMinFreeThreshold=10   # default 10 — срочный GC если free < 10%
 
 # Concurrent threads
 -XX:ConcGCThreads=4

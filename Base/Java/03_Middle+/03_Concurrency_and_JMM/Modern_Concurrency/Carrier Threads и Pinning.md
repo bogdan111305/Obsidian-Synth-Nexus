@@ -121,11 +121,16 @@ try {
 ```
 
 ```java
-// Программная диагностика через JFR:
-RecordingConfiguration config = new RecordingConfiguration.Builder()
-    .enable("jdk.VirtualThreadPinned")
-    .withThreshold("jdk.VirtualThreadPinned", Duration.ofMillis(10))
-    .build();
+// Программная диагностика через JFR (реальный API — jdk.jfr.Recording,
+// класса "RecordingConfiguration" в JDK не существует):
+try (Recording recording = new Recording()) {
+    recording.enable("jdk.VirtualThreadPinned")
+             .withThreshold(Duration.ofMillis(10));
+    recording.start();
+    // ... выполнить код с VT ...
+    recording.stop();
+    recording.dump(Path.of("pinning.jfr"));
+}
 ```
 
 ---

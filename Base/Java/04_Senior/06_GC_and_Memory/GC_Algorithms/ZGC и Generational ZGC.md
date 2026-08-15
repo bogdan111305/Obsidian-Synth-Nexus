@@ -14,17 +14,20 @@
 ZGC кодирует метаданные GC прямо в битах pointer:
 
 ```
-64-bit pointer layout (ZGC):
+64-bit pointer layout (классический, non-generational ZGC, Java 15-20):
 ┌────────────────────────────────────────────────┐
 │ 18 bits unused │ 4 bits color │ 42 bits address │
 └────────────────────────────────────────────────┘
 
 Color bits:
-- Marked0    (bit 45): объект помечен в фазе mark0
-- Marked1    (bit 46): объект помечен в фазе mark1  
-- Remapped   (bit 47): pointer обновлён после relocation
-- Finalizable (bit 48): только finalizable достижим
+- Marked0    : объект помечен в фазе mark0
+- Marked1    : объект помечен в фазе mark1  
+- Remapped   : pointer обновлён после relocation
+- Finalizable: только finalizable достижим
 ```
+
+> [!WARNING]
+> Это раскладка **классического (non-generational) ZGC**. В Generational ZGC (Java 21+, дефолт с Java 23+) формат colored pointer расширен: отдельные Marked-биты для Young и Old поколений плюс биты remembered set — метаданных больше 4 бит, а не только Marked0/Marked1/Remapped/Finalizable. Конкретная точная бит-раскладка для Generational ZGC меняется между версиями и требует сверки с исходниками (`zAddress.hpp`) под конкретный JDK — не полагайся на цифры выше как на актуальные для дефолтного ZGC сегодня.
 
 Проверка состояния объекта = битовая операция над pointer (без чтения object header).
 
@@ -93,7 +96,7 @@ Concurrent Relocate           — переместить объекты
 # Heap
 -Xms16g -Xmx16g  # фиксируй Xms=Xmx
 
-# Concurrent GC threads (default = nCPU/8, min=1, max=8)
+# Concurrent GC threads (default ≈ 25% активных CPU, минимум 1 — эргономика ZHeuristics, без жёсткого потолка)
 -XX:ConcGCThreads=4
 
 # GC логирование

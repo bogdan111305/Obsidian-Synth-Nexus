@@ -1,6 +1,6 @@
 # Project Leyden и AOT
 
-> **Project Leyden** (JEP 483, Java 24 preview) — AOT (Ahead-of-Time) компиляция и снапшоты классов для JVM. Цель: ускорить startup и warm-up Java приложений до уровня нативных. **AppCDS** (Application Class-Data Sharing) — предшественник: кэш загруженных классов между запусками.
+> **Project Leyden** (JEP 483, Java 24 — финализирован/delivered, НЕ preview) — AOT (Ahead-of-Time) компиляция и снапшоты классов для JVM. Цель: ускорить startup и warm-up Java приложений до уровня нативных. Проект продолжает развиваться: JEP 514/515 (Java 25), JEP 516 — AOT-кэш объектов, совместимый с любым GC включая ZGC (Java 26). **AppCDS** (Application Class-Data Sharing) — предшественник: кэш загруженных классов между запусками.
 
 ## Связанные темы
 [[ClassLoaders]], [[JVM Startup и AppCDS]], [[JIT Compiler & Optimizations]]
@@ -76,7 +76,7 @@ Layer 2: Application cache (бизнес-классы)
 | Peak throughput | Полный JIT | Ниже (без JIT профилирования) |
 | Footprint | JVM + heap | Маленький |
 | Совместимость | 100% Java | Ограничена |
-| Зрелость | Java 24 preview | Mature (GraalVM CE/EE) |
+| Зрелость | Java 24, финальная фича (не preview); проект развивается дальше — JEP 514/515 (Java 25), JEP 516 (Java 26) | Mature (GraalVM CE/EE) |
 
 **Вывод**: Leyden — для стандартных Java приложений где нужно ускорить startup без отказа от динамичности. GraalVM NI — для serverless/CLI где startup <100 мс критичен.
 
@@ -135,6 +135,6 @@ java -XX:AOTCache=spring.aot -jar app.jar
 
 ## Подводные камни
 - AppCDS архив привязан к конкретному JDK build — обновление JDK = пересоздание архива
-- Leyden AOT (Java 24) — Preview feature, API может измениться
+- Leyden AOT (JEP 483, Java 24) — это уже финальная (не preview) фича; но Project Leyden в целом продолжает добавлять новые JEP (514/515 в Java 25, 516 в Java 26) — конкретные возможности/флаги между версиями расширяются, проверяй актуальный набор для нужной версии JDK
 - Если training run не покрывает все code paths → некоторые классы не в кэше → частичное ускорение
 - Dynamic class generation (Proxy, CGLIB, ByteBuddy) обычно не кэшируется — Spring AOT заменяет их статическим кодом

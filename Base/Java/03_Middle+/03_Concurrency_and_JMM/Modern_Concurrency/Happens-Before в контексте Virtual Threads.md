@@ -109,8 +109,10 @@ ScopedValue.where(REQUEST_ID, "req-123").run(() -> {
 
 ```java
 try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-    Future<String> f1 = scope.fork(() -> fetchUser());    // VT 1
-    Future<String> f2 = scope.fork(() -> fetchOrders());  // VT 2
+    // fork() возвращает Subtask<T>, НЕ Future<T> — начиная с самого первого preview (JEP 453, Java 21)
+    // fork() специально не возвращает Future/CompletableFuture: их API избыточен для уже-завершённой задачи
+    Subtask<String> f1 = scope.fork(() -> fetchUser());    // VT 1
+    Subtask<String> f2 = scope.fork(() -> fetchOrders());  // VT 2
 
     scope.join();          // happens-after оба VT завершились
     scope.throwIfFailed();

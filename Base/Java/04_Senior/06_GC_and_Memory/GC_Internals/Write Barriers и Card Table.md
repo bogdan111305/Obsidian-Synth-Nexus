@@ -93,7 +93,7 @@ G1 запускает фоновые **Concurrent Refinement Threads** — он�
 
 ```bash
 # Количество refinement threads
--XX:G1ConcRefinementThreads=8  # default = количество ядер / 4
+-XX:G1ConcRefinementThreads=8  # default = ParallelGCThreads (эргономически, не отдельная формула "ядра/4")
 
 # Если refinement не успевает → мутирующие потоки помогают (Mutator Refinement)
 # Признак в логах: "Concurrent RS Threads times"

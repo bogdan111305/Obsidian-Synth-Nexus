@@ -1,6 +1,6 @@
 ﻿# Value Classes и Primitive Classes
 
-> **Project Valhalla** (JEP 401 preview Java 23, JEP 402 Java 24) вводит **Value Classes** — объекты без identity, хранимые по значению. Это позволяет JVM оптимизировать layout в памяти: избавиться от заголовков объектов и косвенной адресации, хранить данные "flat" в массивах и полях.
+> **Project Valhalla** (JEP 401 — Value Classes and Objects, Preview; интеграция в mainline OpenJDK — ~июль 2026, таргет-релиз JDK 28 в марте 2027, на дату проверки ещё не вышел ни в одном GA JDK) вводит **Value Classes** — объекты без identity, хранимые по значению. Это позволяет JVM оптимизировать layout в памяти: избавиться от заголовков объектов и косвенной адресации, хранить данные "flat" в массивах и полях.
 
 ## Связанные темы
 [[Object Identity — что меняется]], [[Valhalla и коллекции]], [[Java Memory Structure]], [[Java Bytecode — структура и опкоды]]
@@ -32,7 +32,9 @@ Object layout (HotSpot, 64-bit, compressed oops):
 ## Value Class — решение
 
 ```java
-// Java 23+ (JEP 401, Preview)
+// Синтаксис Preview-фичи JEP 401 (mainline-интеграция ~июль 2026, таргет JDK 28).
+// На released JDK (23-26 включительно) не существует; до интеграции был доступен
+// только в experimental Valhalla EA-сборках (jdk.java.net/valhalla).
 value class Point {
     int x;
     int y;
@@ -64,9 +66,11 @@ value class Point {
 
 *Nullable Value существует, но это отдельная концепция.
 
-## Primitive Classes (JEP 402)
+## Primitive Classes — статус требует ручной проверки, вероятно устарело
 
-**Primitive class** — value class с ещё более ограниченной семантикой, позволяющий JVM обращаться с ним как с примитивом:
+> [!WARNING] Актуальный JEP 402 называется **«Enhanced Primitive Boxing»** и НЕ вводит отдельное ключевое слово `primitive class` — он описывает облегчённый boxing поверх value-классов, и на дату проверки (2026) даже не запланирован в JDK 28. Синтаксис `primitive class` ниже — из более раннего (2021-2023) дизайна Valhalla (проекции `.val`/`.ref`, позже `!`/`?`), который был впоследствии заменён единым модификатором `value`. Код ниже нужно перепроверять вручную перед использованием на интервью — он отражает устаревший вариант дизайна.
+
+**Primitive class** (устаревший термин из раннего дизайна) — value class с ещё более ограниченной семантикой, позволяющий JVM обращаться с ним как с примитивом:
 
 ```java
 primitive class Complex {
@@ -92,13 +96,13 @@ Complex c = a.add(b);  // ← zero heap allocation, zero GC pressure
 
 ## Текущий статус (2026)
 
-| JEP | Содержание | Статус |
+| JEP | Содержание | Статус (проверено 2026) |
 |-----|-----------|--------|
-| JEP 401 | Value Classes and Objects (Preview) | Java 23+ Preview |
-| JEP 402 | Primitive Types in Patterns, instanceof, switch | Java 23+ Preview |
+| JEP 401 | Value Classes and Objects (Preview) | Preview; интеграция в mainline ~июль 2026, таргет JDK 28 (~март 2027) — ещё не выпущен ни в одном GA JDK |
+| JEP 402 | Enhanced Primitive Boxing (Preview) — НЕ вводит ключевое слово `primitive class` | Не финализирован, не запланирован в JDK 28, даты нет |
 | JEP 169 | Value Objects (исторический) | Withdrawn, заменён 401 |
 
-Для использования: `--enable-preview -source 23`
+Для использования (на дату проверки): только experimental EA-сборки jdk.java.net/valhalla; после mainline-интеграции — EA-сборки JDK 28 с `--enable-preview --release 28`. Ни на одном released JDK (включая 23-26) недоступно.
 
 ## Пример: до и после Valhalla
 
@@ -159,5 +163,5 @@ prices.add(new Money(100));
 - Value class не может быть `null` по умолчанию — нужен специальный nullable wrapper или Optional<ValueClass>
 - `==` для value class сравнивает поля, а не адреса — семантически как `equals()` у record. Это меняет поведение при использовании как ключей HashMap (до полной поддержки)
 - Нет наследования value classes от других классов (только интерфейсы) — ограничение дизайна
-- На 2026 год это Preview feature — нельзя использовать в production без `--enable-preview`
+- На дату проверки (2026) это ещё даже не выпущено ни в одном GA JDK — только experimental EA-сборки Valhalla / mainline-интеграция для JDK 28 (март 2027). Нельзя использовать в production ни при каких флагах на текущих released версиях
 - JVM-оптимизация "scalarization" работает и сейчас для short-lived объектов через Escape Analysis — Valhalla расширяет это на long-lived и array элементы
