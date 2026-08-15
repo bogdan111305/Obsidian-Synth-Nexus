@@ -70,6 +70,8 @@ try (var exec = Executors.newVirtualThreadPerTaskExecutor()) {
 
 ### ThreadLocal в VT — работает, но с оговорками
 
+Полное устройство `ThreadLocalMap`, утечки в пулах потоков и `InheritableThreadLocal` — в [[ThreadLocal]]. Здесь — только то, что специфично для VT: видимость при смене carrier.
+
 ```java
 // ThreadLocal работает: каждый VT имеет свой экземпляр
 ThreadLocal<String> requestId = new ThreadLocal<>();

@@ -10,26 +10,17 @@
 
 ## Проблемы ThreadLocal с виртуальными потоками
 
-```java
-// 1. InheritableThreadLocal: при создании virtual thread — КОПИРУЕТСЯ вся ThreadLocalMap
-static final InheritableThreadLocal<User> USER = new InheritableThreadLocal<>();
+Полное устройство `ThreadLocal`/`ThreadLocalMap`, утечки в пулах потоков и стоимость `InheritableThreadLocal` разобраны в [[ThreadLocal]]. Здесь — три причины, по которым эти проблемы стали критичными именно с приходом виртуальных потоков:
 
-Thread.ofVirtual().start(() -> {
-    USER.get(); // JVM скопировала весь ThreadLocalMap родителя!
-});
-// 1_000_000 виртуальных потоков = 1_000_000 копий Map → огромный overhead памяти
-
-// 2. Мутабельность: любой код может сделать ThreadLocal.set() — состояние непредсказуемо
-threadLocal.set("A");
-callFramework(); // может вызвать threadLocal.set("B") под капотом
-String val = threadLocal.get(); // "B" — неожиданно!
-
-// 3. Утечки в thread pool: забытый remove() = "грязный" поток в пуле
-void handleRequest() {
-    TL.set(openConnection());
-    // ... забыли TL.remove() → connection утёк, поток вернулся в пул с TL
-}
-```
+1. **`InheritableThreadLocal` копирует всю `ThreadLocalMap` при старте каждого потока** (O(n), не O(1)). При тысячах платформенных потоков это было незаметно; при миллионе виртуальных — миллион копий карты, ощутимый overhead памяти.
+2. **Мутабельность — состояние непредсказуемо в динамике.** Любой код в стеке вызовов может незаметно сделать `set()`:
+   ```java
+   threadLocal.set("A");
+   callFramework();               // может вызвать threadLocal.set("B") под капотом
+   String val = threadLocal.get(); // "B" — неожиданно!
+   ```
+   Это не зависит от VT напрямую, но при миллионах короткоживущих VT-задач цена случайной мутации в общем framework-коде растёт.
+3. **Забытый `remove()` = утечка на весь срок жизни потока в пуле** — с VT-per-task эта проблема формально исчезает (поток одноразовый), но при повторном использовании `Thread.ofVirtual()`-подобных паттернов или при переносе legacy-кода на VT грабли остаются те же.
 
 ---
 

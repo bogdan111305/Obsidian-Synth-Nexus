@@ -3,7 +3,7 @@
 > **Safepoint** — момент выполнения, в котором JVM может безопасно остановить поток: стек известен, регистры разобраны, объекты на куче целостны. **STW (Stop-The-World)** — пауза всех потоков для выполнения GC-фазы или иного глобального действия.
 
 ## Связанные темы
-[[GC Roots и достижимость объектов]], [[Write Barriers и Card Table]], [[G1GC — архитектура и tuning]], [[ZGC и Generational ZGC]], [[Safepoints и Stop-The-World]]
+[[GC Roots и достижимость объектов]], [[Write Barriers и Card Table]], [[G1GC — архитектура и tuning]], [[ZGC и Generational ZGC]], [[Shenandoah GC]], [[GC и латентность — практика]]
 
 ---
 
