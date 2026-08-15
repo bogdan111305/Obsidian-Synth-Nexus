@@ -73,8 +73,12 @@ Concurrent Relocate           — переместить объекты
 До Java 21 ZGC был "non-generational" — каждый GC cycle обрабатывал весь heap. Generational ZGC добавляет:
 
 ```bash
--XX:+UseZGC -XX:+ZGenerational  # Java 21
-# В Java 23+ Generational ZGC стал дефолтным для UseZGC
+-XX:+UseZGC -XX:+ZGenerational  # Java 21-23: явно включить Generational-режим
+# JEP 474 (Java 23) — Generational стал дефолтным режимом для -XX:+UseZGC
+# JEP 490 (Java 24) — non-generational режим ПОЛНОСТЬЮ УДАЛЁН из ZGC;
+#   флаг -XX:+ZGenerational стал obsolete (no-op) — начиная с Java 24
+#   достаточно просто -XX:+UseZGC, ZGenerational не нужен и может со
+#   временем перестать распознаваться JVM вообще
 ```
 
 **Young Generation** — маленький, собирается часто (Minor GC).
@@ -90,7 +94,8 @@ Concurrent Relocate           — переместить объекты
 # Базовое включение
 -XX:+UseZGC
 
-# Generational (Java 21+, рекомендуется)
+# Generational (Java 21-23: нужен явный флаг; Java 24+: -XX:+ZGenerational
+# obsolete/no-op, non-generational режим удалён — просто -XX:+UseZGC)
 -XX:+UseZGC -XX:+ZGenerational
 
 # Heap
@@ -149,4 +154,4 @@ Concurrent Relocate           — переместить объекты
 - ZGC concurrent работает пока приложение работает → надо оставить CPU для GC потоков (ConcGCThreads). На CPU-saturated системе ZGC может не успевать
 - Allocation rate > reclamation rate → "Allocation Stall" — ZGC просит мутатора подождать. Это de-facto STW. Решение: увеличь heap или снизь allocation rate
 - Colored pointers требуют 48-bit VA space → не работает на 32-bit JVM и некоторых конфигурациях Linux с ограниченным VA space
-- Non-generational ZGC (до Java 21) при heap 512 MB работает хуже G1 по throughput — выбирай только при latency требованиях
+- Non-generational ZGC (Java 15-22, до JEP 490 в Java 24 удалившего этот режим совсем) при heap 512 MB работал хуже G1 по throughput — исторический контекст, сегодня режим уже не выбрать
