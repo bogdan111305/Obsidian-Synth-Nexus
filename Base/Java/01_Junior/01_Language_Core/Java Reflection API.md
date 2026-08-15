@@ -42,7 +42,6 @@ Class<?> c4 = Class.forName("com.example.Foo", false, Thread.currentThread().get
 - `getDeclaredFields()` — все поля **этого** класса (включая private), без унаследованных
 - `getFields()` — все **public** поля, включая унаследованные
 
-```
 ```java
 class Person {
     private String name = "Alex";
