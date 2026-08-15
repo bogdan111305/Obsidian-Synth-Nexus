@@ -53,7 +53,7 @@ public static long sum(int n) {
     return sum;
 }
 
-// ArgEscape → Lock Elimination: synchronized удаляется для локального объекта
+// NoEscape → Lock Elimination: synchronized удаляется для локального объекта
 public String buildString() {
     StringBuffer sb = new StringBuffer(); // NoEscape → все lock eliminated!
     sb.append("Hello ").append("World");

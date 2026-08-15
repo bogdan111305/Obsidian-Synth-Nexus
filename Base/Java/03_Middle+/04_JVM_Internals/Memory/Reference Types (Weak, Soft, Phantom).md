@@ -239,5 +239,5 @@ static {
 - **PhantomReference без ReferenceQueue** — бесполезен: `get()` всегда null, уведомление никогда не получишь.
 - **Cleanup action захватывает `this`** — `cleaner.register(this, () -> this.cleanup())` — lambda держит strong ref на `this`, GC никогда не соберёт объект. Захватывай только final поля: `long h = nativeHandle; cleaner.register(this, () -> free(h))`.
 - **Потеря Reference объекта** — если `WeakReference ref = new WeakReference<>(obj)` — локальная переменная вышла из scope → сам `WeakReference` стал мусором → никогда не попадёт в ReferenceQueue.
-- **`finalize()` deprecated** — JDK 9 deprecated, JDK 21 — `@Deprecated(forRemoval = true)`. Используй `Cleaner` или `try-with-resources`.
+- **`finalize()` deprecated** — JDK 9 deprecated, JDK 18 (JEP 421) — `@Deprecated(forRemoval = true)`. Используй `Cleaner` или `try-with-resources`.
 - **SoftReference и GC overhead** — слишком много SoftReference объектов замедляет GC: при каждом Full GC нужно проверять все из них. Предпочти Caffeine `softValues()` кэш с лимитом по размеру.

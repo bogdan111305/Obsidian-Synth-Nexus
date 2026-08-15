@@ -1,6 +1,6 @@
 # invokedynamic — механика
 
-> `invokedynamic` (Java 7, JEP 292) — опкод байткода для динамически связанных вызовов. При первом выполнении вызывает **bootstrap method**, который возвращает `CallSite` с `MethodHandle`. Последующие вызовы идут напрямую через MH — без JVM overhead. Используется для лямбд, String concatenation (Java 9+), MethodHandles.
+> `invokedynamic` (Java 7, JSR 292) — опкод байткода для динамически связанных вызовов. При первом выполнении вызывает **bootstrap method**, который возвращает `CallSite` с `MethodHandle`. Последующие вызовы идут напрямую через MH — без JVM overhead. Используется для лямбд, String concatenation (Java 9+), MethodHandles.
 
 ## Связанные темы
 [[Java Bytecode — структура и опкоды]], [[MethodHandle & LambdaMetafactory]], [[JIT Compiler & Optimizations]], [[Java Reflection API]]
