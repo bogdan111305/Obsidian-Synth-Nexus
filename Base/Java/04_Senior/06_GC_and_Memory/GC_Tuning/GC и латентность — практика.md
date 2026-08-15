@@ -172,8 +172,9 @@ for (int i = 0; i < 100_000_000; i++) {
     process(data[i]);  // без вызовов методов (inlined) → нет safepoint poll
 }
 
-// Решение 1: убедись что UseCountedLoopSafepoints включён (Java 10+)
-// -XX:+UseCountedLoopSafepoints (default true)
+// Решение 1: убедись что Loop Strip Mining не отключён (default с Java 10+,
+// -XX:LoopStripMiningIter=1000). Именно он вставляет safepoint между
+// "полосами" цикла — не -XX:+UseCountedLoopSafepoints (тот default false)
 
 // Решение 2: разбить на части
 int chunkSize = 10_000;

@@ -64,8 +64,11 @@ for (int i = 0; i < Integer.MAX_VALUE; i++) {
 }
 // Результат: поток не входит в safepoint → STW пауза растёт
 
-// Решение в Java 10+: JVM вставляет safepoints в counted loops по умолчанию
-// -XX:+UseCountedLoopSafepoints (по умолчанию true с Java 10)
+// Решение в Java 10+: Loop Strip Mining (JDK-8186027) — C2 по умолчанию
+// разбивает длинный counted loop на "полосы" по LoopStripMiningIter
+// итераций (default 1000) и вставляет safepoint poll между полосами.
+// -XX:+UseCountedLoopSafepoints — ОТДЕЛЬНЫЙ флаг, default FALSE;
+// форсирует safepoint на КАЖДОЙ итерации (жёстче, обычно не нужен).
 ```
 
 ## Диагностика
@@ -110,5 +113,5 @@ Concurrent GC фазы (G1 Concurrent Marking, ZGC, Shenandoah) работают
 ## Подводные камни
 - `jmap -histo` и `jmap -dump` требуют полного STW — недопустимо на продакшн-сервисе
 - Длинные native методы (JNI) не входят в safepoint пока не вернутся в Java — JVM их не ждёт, но native thread не может двигать объекты
-- `-XX:+UseCountedLoopSafepoints` включён по умолчанию с Java 10, но в старых версиях это была частая причина задержанных пауз
+- До Java 10 отсутствие safepoint poll в длинных counted loops было частой причиной задержанных пауз. С Java 10 это закрывает Loop Strip Mining по умолчанию (не `UseCountedLoopSafepoints`, у которого default false)
 - Метрики GC логов показывают только GC время, без time-to-safepoint — надо логировать safepoint отдельно

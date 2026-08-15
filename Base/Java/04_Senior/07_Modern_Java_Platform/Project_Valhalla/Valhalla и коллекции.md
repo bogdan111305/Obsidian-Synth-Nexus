@@ -145,15 +145,15 @@ Stream<Point> points = Stream.of(new Point(1,2), new Point(3,4));
 
 ## Когда это будет
 
-| Фича | JEP | Статус (2026) |
+| Фича | JEP | Статус (проверено 2026) |
 |------|-----|---------------|
-| Value Classes | JEP 401 | Preview Java 23+ |
-| Primitive Classes | JEP 402 | Preview Java 24 |
+| Value Classes | JEP 401 | Preview; интеграция в mainline ~июль 2026, таргет JDK 28 (~март 2027) — ещё не выпущен ни в одном GA JDK |
+| Enhanced Primitive Boxing (не "Primitive Classes" — отдельного `primitive class` в текущем дизайне нет) | JEP 402 | Не финализирован, не запланирован даже в JDK 28 |
 | Specialized Generics | Нет финал. JEP | В разработке |
 | Collections specialization | — | Зависит от Generics |
 | Integer как value | — | После Specialized Generics |
 
-Полная коллекция-поддержка — Java 28-30 (ориентировочно).
+Полная коллекция-поддержка — Java 28-30 (ориентировочно); при этом JDK 28 несёт только Preview Value Classes (JEP 401), не полную поддержку коллекций.
 
 ---
 
