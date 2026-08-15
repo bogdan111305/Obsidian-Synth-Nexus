@@ -89,6 +89,8 @@ TreeSet<String> desc = new TreeSet<>(Comparator.reverseOrder());
 TreeSet<Person> byAge = new TreeSet<>(Comparator.comparingInt(Person::age));
 ```
 
+**Почему `TreeSet` не допускает `null`:** позиция элемента определяется сравнением с уже вставленными элементами через `compareTo()`/`Comparator.compare()`. `null.compareTo(x)` или `compare(null, x)` бросает `NullPointerException` — дереву физически некуда "приткнуть" элемент, который нельзя сравнить. `HashSet`/`LinkedHashSet` null допускают, потому что позиция там определяется хэшем (`hash(null) = 0` — фиксированный бакет), а не сравнением.
+
 ---
 
 ## Set операции
@@ -117,6 +119,8 @@ symDiff.removeAll(intersection); // {a, d}
 a.containsAll(intersection); // true
 ```
 
+**Сложность:** `retainAll`/`removeAll`/`addAll` на `HashSet` — O(n), где n — размер коллекции, на которой вызван метод (для каждого её элемента идёт O(1)-проверка `contains` по другой коллекции). Отсюда практический совет: вызывать `retainAll` на **меньшем** из двух множеств (или заранее скопировать в новый `HashSet` меньшую сторону) — так операция обойдётся дешевле, чем если гонять большее множество через меньшее.
+
 ---
 
 ## LinkedHashSet — когда нужен
@@ -134,17 +138,6 @@ visited.getFirst(); // "home"
 visited.getLast();  // "gym"
 visited.reversed(); // ["gym", "work", "home"] — view
 ```
-
----
-
-## Вопросы на интервью
-
-- Почему `HashSet` под капотом использует `HashMap`? Что хранится как значение?
-- Что произойдёт если добавить в `HashSet` объект без `equals`/`hashCode`?
-- Чем `TreeSet.floor()` отличается от `ceiling()`?
-- Как реализовать пересечение двух `Set`? Какая сложность?
-- Почему `TreeSet` не допускает `null`?
-- Что такое `NavigableSet`? Какие методы он добавляет к `SortedSet`?
 
 ---
 

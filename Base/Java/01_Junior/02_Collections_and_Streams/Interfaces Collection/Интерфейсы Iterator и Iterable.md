@@ -38,6 +38,8 @@ while (it.hasNext()) {
 }
 ```
 
+`for-each` работает только с массивами и типами, реализующими `Iterable` — компилятор проверяет это на этапе компиляции. Если класс не реализует `Iterable`, `for (X x : obj)` не скомпилируется вовсе (`error: for-each not applicable to expression type`), а не упадёт в рантайме. Именно поэтому `Map<K,V>` — не `Iterable` — нельзя написать `for (var e : map)` напрямую (см. [[Общая иерархия коллекций]]): нужно перебирать одно из её view-представлений, `map.entrySet()`, `map.keySet()` или `map.values()`, — они сами `Iterable`, так как это `Set`/`Collection`.
+
 ---
 
 ## modCount и ConcurrentModificationException
@@ -129,7 +131,7 @@ for (User user : new PagedIterable<>(page -> userService.getPage(page, 100), 100
 
 ## Spliterator — параллельная итерация
 
-`Spliterator` (Java 8) используется `Stream` для разбиения данных на части для `parallelStream()`:
+`Spliterator` (Java 8) используется `Stream` для разбиения данных на части для `parallelStream()`. Ключевое отличие от `Iterator`: обычный `Iterator` умеет только последовательно двигаться вперёд (`hasNext()`/`next()`) и ничего не знает ни о размере оставшихся данных, ни о том, как поделить работу между потоками. `Spliterator` добавляет `trySplit()` (отдать половину данных другому потоку), `estimateSize()` (оценка объёма для балансировки) и `characteristics()` (метаданные об источнике) — этого достаточно, чтобы `ForkJoinPool` рекурсивно делил источник и раздавал куски worker-потокам без ручной синхронизации.
 
 ```java
 interface Spliterator<T> {
@@ -179,17 +181,6 @@ while (lit.hasPrevious()) {
 // set(E e) — заменить последний элемент (next() или previous())
 // add(E e) — вставить перед следующим элементом
 ```
-
----
-
-## Вопросы на интервью
-
-- Как `for-each` компилируется в байт-код? Что происходит если класс не реализует `Iterable`?
-- Как работает `ConcurrentModificationException`? Что такое `modCount`?
-- Почему `iterator.remove()` не бросает CME, а `list.remove()` внутри цикла — бросает?
-- Чем `Spliterator` отличается от `Iterator`? Как он используется в параллельных стримах?
-- Можно ли использовать `for-each` для `Map`? (Нет, Map не Iterable, но `entrySet()` — да)
-- Что такое `ListIterator`? Какие возможности он добавляет?
 
 ---
 

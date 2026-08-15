@@ -67,6 +67,8 @@ c.setAccessible(true);
 Person p2 = (Person) c.newInstance("Bob");
 ```
 
+**Что делает `setAccessible(true)` внутри JVM:** `Field`, `Method` и `Constructor` наследуются от общего базового класса `AccessibleObject`, у которого есть флаг `override`. По умолчанию JVM при каждом обращении к этим объектам через Reflection выполняет ту же проверку доступа (`private`/`protected`/package-private), что и обычный компилятор для прямого обращения из кода. `setAccessible(true)` не меняет модификаторы класса и не патчит байткод — он просто выставляет этот флаг в объекте-дескрипторе, из-за чего JVM пропускает проверку доступа на дальнейших вызовах `get`/`set`/`invoke`/`newInstance` через этот конкретный экземпляр `Field`/`Method`/`Constructor`. Именно поэтому объект `Field`/`Method` имеет смысл кэшировать (см. ниже) — флаг выставляется один раз.
+
 ---
 
 ## Аннотации
@@ -169,7 +171,9 @@ public final class $Proxy0 extends Proxy implements UserService {
 
 ## MethodHandle vs Reflection
 
-`MethodHandle` (Java 7, `java.lang.invoke`) — типобезопасная быстрая альтернатива `Method.invoke()`. JIT может инлайнить MethodHandle через `invokedynamic`.
+`MethodHandle` (Java 7, `java.lang.invoke`) — типобезопасная быстрая альтернатива `Method.invoke()`. `Method.invoke()` медленный по нескольким причинам сразу: аргументы упаковываются в `Object[]` (боксинг примитивов + allocation массива на каждый вызов), на каждый вызов выполняется проверка доступа (если не был вызван `setAccessible`) и целевой метод для JIT остаётся «непрозрачным» — он вызывается через общий диспетчер `Method.invoke`, а не через прямой call site, поэтому классический JIT не может его инлайнить и специализировать так же, как обычный виртуальный вызов.
+
+`MethodHandle` решает это иначе: он опирается на инструкцию `invokedynamic` и механизм call site'ов, которые JIT умеет трактовать почти как обычный вызов метода. После «прогрева» (нескольких тысяч вызовов через один и тот же call site) JIT может распознать, что вызов стабильно ведёт на один и тот же целевой метод, и заинлайнить `MethodHandle.invoke`/`invokeExact` напрямую в вызывающий код — почти без накладных расходов, в отличие от `Method.invoke()`, для которого такой оптимизации нет.
 
 ```java
 MethodHandles.Lookup lookup = MethodHandles.lookup();
@@ -229,7 +233,7 @@ class FastMapper {
 
 ## Java 9+ Module System и Reflection
 
-JPMS (Project Jigsaw) ограничивает `setAccessible(true)` для закрытых модулей:
+JPMS (Project Jigsaw) ограничивает `setAccessible(true)` для закрытых модулей. Модуль по умолчанию инкапсулирует все свои пакеты: код снаружи модуля не видит их даже на этапе компиляции. Директива `exports` в `module-info.java` открывает пакет для обычного, compile-time доступа (публичные классы становятся видимы и вызываемы напрямую). Директива `opens` — более узкая: она разрешает только **runtime**-доступ через Reflection (`setAccessible`, `MethodHandles.privateLookupIn`) к непубличным членам пакета, но не даёт скомпилировать код, напрямую обращающийся к внутренним классам пакета. Именно поэтому фреймворкам вроде Spring и Hibernate, которым нужно рефлексивно читать/писать private-поля сущностей, требуется `opens ... to <модуль-фреймворка>`, даже если сам пакет уже помечен `exports`.
 
 ```java
 // Ошибка без opens:
@@ -258,20 +262,6 @@ String value = (String) vh.get(target); // работает без setAccessible
 Spring 6+ и Hibernate 6+ используют `MethodHandles.privateLookupIn` + `VarHandle` вместо `Field.setAccessible(true)`.
 
 ---
-
-## Вопросы на интервью
-
-- Чем `getDeclaredFields()` отличается от `getFields()`?
-- Что делает `setAccessible(true)` внутри JVM? Что такое `AccessibleObject`?
-- Почему `Method.invoke()` медленнее прямого вызова?
-- Что такое Dynamic Proxy? Как работает `$Proxy0` внутри?
-- Чем JDK Proxy отличается от CGLIB? Когда Spring использует каждый?
-- Что такое `MethodHandle`? Чем `invokeExact` отличается от `invoke`?
-- Почему MethodHandle быстрее Reflection после прогрева? Роль JIT и `invokedynamic`.
-- Что изменила Java 9 в работе с Reflection? Что такое `opens` в `module-info.java`?
-- Как Spring/Hibernate работают с полями в Java 17+ без нарушения JPMS?
-- Для чего нужен `RetentionPolicy.RUNTIME`? Что произойдёт с `RetentionPolicy.CLASS`?
-- Как реализовать простой test runner, используя только Reflection?
 
 ## Подводные камни
 
