@@ -5,6 +5,8 @@
 ## Связанные темы
 [[Panama vs Unsafe vs JNI]], [[Vector API — SIMD в Java]], [[Finalization и Cleaner API]], [[Структура памяти JVM]]
 
+> Эта заметка — API reference: механика `MemorySegment`/`Arena`/`Linker` с примерами кода. Сравнение с JNI/Unsafe, когда что выбирать и миграция — в [[Panama vs Unsafe vs JNI]] (код там не дублируется).
+
 ---
 
 ## Ключевые абстракции

@@ -69,21 +69,14 @@ Region A (Old) ──ref──> Region B (Young)
 
 ## ZGC и Shenandoah — Load Barriers
 
-Конкурентные compacting GC используют **load barriers** (при чтении ссылки), а не только write barriers.
+Конкурентные *compacting* GC (в отличие от G1/Serial/Parallel, которые только помечают dirty-ссылки write barrier'ом) используют ещё и **load barriers** — код при каждом чтении ссылки. Это нужно, потому что compacting GC двигает объекты, пока приложение работает: объект может "переехать" между двумя последовательными чтениями одного и того же поля, и barrier обязан на лету это заметить и исправить pointer.
 
-```
-// ZGC load barrier:
-Object ref = obj.field;
-// JIT вставляет:
-if (ref.color_bits != expected) {
-    ref = slowpath_fixup(ref);  // перерасчёт pointer после relocation
-}
-return ref;
-```
+Оба алгоритма прячут состояние relocation в разных местах:
 
-**Colored pointers** (ZGC): 42 бита — адрес объекта, 4 бита — состояние GC (marked0, marked1, remapped, finalizable). Barrier проверяет эти биты.
+- **ZGC** — в битах самого pointer'а (**colored pointers**): barrier — это проверка нескольких бит без обращения к object header. Полный layout битов и псевдокод barrier'а — [[ZGC и Generational ZGC]].
+- **Shenandoah** — в дополнительном forwarding-слове в заголовке объекта (**Brooks pointer**): barrier разыменовывает это слово при каждом доступе. Детали layout заголовка — [[Shenandoah GC]].
 
-**Brooks pointers** (Shenandoah): дополнительное слово в заголовке каждого объекта — forwarding pointer на новое местонахождение. Load barrier разыменовывает его.
+Разница в подходе — почему у ZGC нет per-object memory overhead (цена — 3x virtual address space), а у Shenandoah есть (+8 байт на объект), но нет multi-mapping. Сравнение обоих механизмов и цены на throughput — см. таблицу ниже.
 
 ## Сравнение подходов
 

@@ -4,7 +4,7 @@
 > На интервью: как работает на разных архитектурах, чем `compareAndExchange` лучше `compareAndSet`, зачем `weakCompareAndSet`, что такое False Sharing.
 
 ## Связанные темы
-[[Atomic (java.util.concurrent.atomic)]], [[Модель памяти Java (JMM) и барьеры памяти]], [[Lock]], [[Java Monitor]]
+[[Atomic]], [[Модель памяти Java (JMM) и барьеры памяти]], [[Lock]], [[Java Monitor]]
 
 ---
 
@@ -87,7 +87,7 @@ while ((witness = HEAD_VH.compareAndExchange(this, expected, newNode)) != expect
 
 `sun.misc.Unsafe` — нестабильный internal API. С Java 9 требует `--add-opens`, с Java 17 — предупреждения при доступе через рефлексию. **Не использовать в новом коде.**
 
-`VarHandle` (Java 9+) — стабильная замена:
+`VarHandle` (Java 9+) — стабильная замена (семантика барьеров каждого режима ordering — в [[Модель памяти Java (JMM) и барьеры памяти]]):
 
 ```java
 public class LockFreeCounter {

@@ -5,6 +5,8 @@
 ## Связанные темы
 [[ClassLoaders]], [[JIT Compiler & Optimizations]], [[Project Leyden и AOT]], [[Java Memory Structure]]
 
+> Эта заметка — полная механика CDS/AppCDS/Dynamic CDS (флаги, шаги, подводные камни). Про Leyden AOT — расширение той же идеи на весь startup (class loading + linking + JVM init, слоями) — см. [[Project Leyden и AOT]], там механика AppCDS не повторяется.
+
 ---
 
 ## Фазы запуска JVM
@@ -116,6 +118,12 @@ java -XX:SharedArchiveFile=dynamic.jsa -jar app.jar
 
 **Минус:** нужно запустить приложение хотя бы раз, загрузить нужные классы, потом завершить. Для приложений с lazy loading не все классы попадут в архив.
 
+**Упрощение — `-XX:+AutoCreateSharedArchive` (Java 19+):** один флаг вместо трёх ручных шагов. JVM сама создаёт архив, если его нет, и переиспользует при следующих запусках; если classpath/JDK изменился — тихо пересоздаёт вместо падения с ошибкой (в отличие от `-Xshare:on`):
+
+```bash
+java -XX:+AutoCreateSharedArchive -XX:SharedArchiveFile=app.jsa -jar app.jar
+```
+
 ---
 
 ## JVM Startup Optimization: инструменты
@@ -155,3 +163,4 @@ hyperfine 'java -jar app.jar' --warmup 3
 - **mmap ≠ загрузка в RAM** — CDS использует memory-mapped файл. Реальная загрузка в RAM происходит при page fault. Польза — нет парсинга и верификации, а не нулевое I/O.
 - **Архив привязан к JVM-версии** — архив для JDK 21 не работает с JDK 21.0.1 (другой build). В контейнерах используй тот же JDK-образ для сборки и запуска.
 - **Spring Boot с CDS: осторожно с @Lazy** — классы, загружаемые лениво, не попадут в архив при генерации. Для полного покрытия нужно прогреть все endpoint'ы при генерации архива.
+- **Runtime-generated классы не архивируются** — Proxy, Lambda (`invokedynamic`), CGLIB-классы генерируются заново при каждом запуске, CDS их не кэширует. Spring AOT обходит это заменой на статический код при сборке (см. [[Project Leyden и AOT]]).

@@ -3,7 +3,7 @@
 > **G1 (Garbage-First)** — дефолтный GC в JDK 9+. Разбивает heap на равные регионы (~1-32 MB), собирает регионы с наибольшим количеством мусора первыми. Цель: предсказуемые паузы с `-XX:MaxGCPauseMillis` при сохранении throughput.
 
 ## Связанные темы
-[[ZGC и Generational ZGC]], [[Safepoints и Stop-The-World]], [[Write Barriers и Card Table]], [[GC Roots и достижимость объектов]], [[JVM флаги для GC]]
+[[ZGC и Generational ZGC]], [[Safepoints и Stop-The-World]], [[Write Barriers и Card Table]], [[GC Roots и достижимость объектов]], [[JVM флаги для GC]], [[Анализ GC логов — JFR, GCEasy]], [[GC и латентность — практика]], [[Выбор GC — сравнительная таблица]]
 
 ---
 
@@ -107,21 +107,11 @@ byte[] big = new byte[3 * 1024 * 1024];  // → Humongous region
 ## Диагностика
 
 ```bash
-# GC логирование
 -Xlog:gc*:file=gc.log:time,uptime,level,tags
-
-# JFR
 -XX:StartFlightRecording=duration=300s,filename=profile.jfr
-
-# Ключевые метрики в логах:
-# [Eden: N->0B] — Young evacuation
-# [Survivors: N->M] — survivor size
-# [Heap: before->after(capacity)]
-# To-space exhausted — признак Evacuation Failure
-# Concurrent Mark Abort — marking прерван из-за нехватки памяти
-
-# GCViewer / GCEasy.io для визуализации
 ```
+
+Полный разбор структуры G1-лога (Minor/Mixed/Full GC записи), паттернов `To-space exhausted`/`Concurrent Mark Abort` и работы с JFR/GCEasy.io — см. [[Анализ GC логов — JFR, GCEasy]]. Справочник флагов логирования и heap sizing — [[JVM флаги для GC]].
 
 ## G1 vs другие GC (когда выбирать)
 
@@ -133,7 +123,7 @@ byte[] big = new byte[3 * 1024 * 1024];  // → Humongous region
 | Latency | Среднее | Минимальное | Плохое |
 | Сложность tuning | Средняя | Низкая | Низкая |
 
-G1 — золотая середина. ZGC выбирай если паузы >50 мс критичны. Parallel — для batch-обработки где throughput важнее latency.
+G1 — золотая середина. ZGC выбирай если паузы >50 мс критичны. Parallel — для batch-обработки где throughput важнее latency. Полная таблица по всем 6 GC (включая Serial, Shenandoah, Epsilon) и решающее дерево — [[Выбор GC — сравнительная таблица]].
 
 ---
 

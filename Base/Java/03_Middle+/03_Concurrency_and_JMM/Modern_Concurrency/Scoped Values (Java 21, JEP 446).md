@@ -4,7 +4,7 @@
 > На интервью: почему ThreadLocal плох с virtual threads, как работает rebinding, как ScopedValue наследуется без копирования, когда ThreadLocal всё ещё нужен.
 
 ## Связанные темы
-[[Процессы и Потоки, Thread, Runnable, состояния потоков]], [[Structured Concurrency (Java 21)]], [[ThreadPool, Future, Callable, Executors, CompletableFuture]]
+[[Процессы и Потоки, Thread, Runnable, состояния потоков]], [[Structured Concurrency]], [[ThreadPool, Future, Callable, Executors, CompletableFuture]], [[ThreadLocal]], [[Virtual Threads — модель и архитектура]]
 
 ---
 

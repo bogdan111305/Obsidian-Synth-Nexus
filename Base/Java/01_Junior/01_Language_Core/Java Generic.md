@@ -1,3 +1,7 @@
+# Java Generics
+
+> Обобщённые типы переносят проверку типов с рантайма (`ClassCastException`) на компиляцию. На интервью чаще всего спрашивают: как работает Type Erasure и что от него остаётся в байт-коде (Signature Attribute), правило PECS (Producer-`extends`, Consumer-`super`), зачем нужны Bridge Methods, почему `list.set(0, list.get(0))` не компилируется для `List<?>`, и что такое Heap Pollution.
+
 ## Связанные темы
 
 [[Java Stream API & Functional Programming]], [[Интерфейсы]], [[MethodHandle & LambdaMetafactory]]
@@ -159,7 +163,7 @@ private <T> void fooHelper(List<T> list) {
 ---
 ## Super Type Tokens: Обход Erasure в Runtime
 
-информация о `List<String>` стирается в полях и методах, но она остается в определении **класса**.
+Информация о `List<String>` стирается в полях и методах, но она остается в определении **класса**.
 
 ### Трюк Neal Gafter (Gafter's Gadget)
 

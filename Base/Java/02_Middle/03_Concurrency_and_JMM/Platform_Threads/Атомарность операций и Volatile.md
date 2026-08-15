@@ -4,7 +4,7 @@
 > На интервью: чем volatile отличается от synchronized, когда volatile достаточно, weak ordering (lazySet/setRelease/setOpaque), False Sharing.
 
 ## Связанные темы
-[[Модель памяти Java (JMM) и барьеры памяти]], [[CAS и Unsafe]], [[Atomic (java.util.concurrent.atomic)]], [[Java Monitor]]
+[[Модель памяти Java (JMM) и барьеры памяти]], [[CAS и Unsafe]], [[Atomic (java.util.concurrent.atomic)]], [[Java Monitor]], [[Производительность коллекций]]
 
 ---
 

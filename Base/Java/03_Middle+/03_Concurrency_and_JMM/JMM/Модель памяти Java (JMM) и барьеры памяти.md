@@ -4,7 +4,7 @@
 > На интервью: правила happens-before, почему DCL без volatile сломан, что такое safe publication, False Sharing.
 
 ## Связанные темы
-[[Атомарность операций и Volatile]], [[Java Monitor]], [[CAS и Unsafe]], [[Atomic (java.util.concurrent.atomic)]], [[Java Memory Structure]]
+[[Атомарность операций и Volatile]], [[Java Monitor]], [[CAS и Unsafe]], [[Atomic]], [[Java Memory Structure]], [[Virtual Threads — модель и архитектура]], [[Happens-Before в контексте Virtual Threads]]
 
 ---
 
@@ -243,11 +243,11 @@ int v = (int) DATA.getAcquire(this); // LoadLoad: все последующие 
 
 ## JMM и Virtual Threads (Java 21+)
 
-Виртуальные потоки полностью соблюдают JMM — все happens-before правила применяются одинаково.
+Виртуальные потоки полностью соблюдают JMM — все happens-before правила применяются одинаково, никакой отдельной модели памяти для них нет.
 
-**Нюанс: pinning при `synchronized`** — виртуальный поток прикрепляется к carrier thread на время удержания монитора. Если carrier thread заблокирован — он недоступен для других виртуальных потоков. `volatile` и `ReentrantLock` не вызывают pinning.
+**Нюанс: pinning при `synchronized`** — виртуальный поток прикрепляется к carrier thread на время удержания монитора. Если carrier thread заблокирован — он недоступен для других виртуальных потоков. `volatile` и `ReentrantLock` не вызывают pinning. Причины и диагностика pinning — в [[Carrier Threads и Pinning]].
 
-**Unmount/mount стека** — при блокировке виртуального потока его стек сохраняется в Heap, при возобновлении — восстанавливается. JMM гарантирует корректную видимость через happens-before на операции mount.
+**Unmount/mount стека** — при блокировке виртуального потока его стек (continuation) сохраняется в Heap, при возобновлении — восстанавливается, в том числе на другом carrier thread. JMM гарантирует корректную видимость через happens-before на операции mount/unmount — детальный разбор конкретных HB-гарантий (`start`, `join`, перемонтирование) и практических паттернов — в [[Happens-Before в контексте Virtual Threads]].
 
 ---
 

@@ -3,7 +3,7 @@
 > **ZGC** (Z Garbage Collector, Java 15 production-ready, JEP 333/377) — low-latency GC с паузами **<1 мс независимо от размера heap** (до 16 ТБ). Достигается через concurrent relocation с colored pointers и load barriers. **Generational ZGC** (Java 21, JEP 439) — добавляет Young/Old поколения для улучшения throughput.
 
 ## Связанные темы
-[[G1GC — архитектура и tuning]], [[Write Barriers и Card Table]], [[Safepoints и Stop-The-World]], [[JVM флаги для GC]], [[Shenandoah GC]]
+[[G1GC — архитектура и tuning]], [[Write Barriers и Card Table]], [[Safepoints и Stop-The-World]], [[JVM флаги для GC]], [[Shenandoah GC]], [[GC Roots и достижимость объектов]], [[Анализ GC логов — JFR, GCEasy]], [[Выбор GC — сравнительная таблица]]
 
 ---
 
@@ -109,17 +109,10 @@ Concurrent Relocate           — переместить объекты
 
 ## ZGC-специфичные метрики в логах
 
-```
-[gc] GC(0) Garbage Collection (Warmup) 3656M(71%)->356M(7%)
-                                          ^ before     ^ after
+Полный разбор строки `Garbage Collection (Warmup) 3656M(71%)->356M(7%)` и всех фаз (`Mark Start`, `Concurrent Mark`, `Relocate Start`, ...) с пометкой STW/concurrent — см. [[Анализ GC логов — JFR, GCEasy]]. Специфично для (Generational) ZGC:
 
-[gc,phases] GC(0) Y: Young Gen
-[gc,phases] GC(0)   Mark Start          0.022ms   ← STW пауза
-[gc,phases] GC(0)   Concurrent Mark     5.234ms
-[gc,phases] GC(0)   Mark End            0.019ms   ← STW пауза
-[gc,phases] GC(0)   Concurrent Relocate 2.341ms
-[gc,phases] GC(0)   Relocate Start      0.018ms   ← STW пауза
-```
+- Метки `Y:` / `O:` в `[gc,phases]` разделяют записи Young/Old поколения (появилось с Generational ZGC, Java 21+)
+- `Small Pages` / `Medium Pages` / `Large Pages` в `[gc,stats]` — статистика по типам ZGC-регионов памяти
 
 ## Когда выбирать ZGC
 

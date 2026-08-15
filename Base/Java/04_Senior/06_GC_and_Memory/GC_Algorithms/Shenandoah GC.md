@@ -3,7 +3,7 @@
 > **Shenandoah** (JEP 189, Java 12 experimental, Java 15 production) — low-latency concurrent compacting GC от Red Hat. Паузы <10 мс независимо от heap (на практике 1-5 мс). Конкурирует с ZGC по latency, но использует иной подход: **Brooks pointers** вместо colored pointers.
 
 ## Связанные темы
-[[ZGC и Generational ZGC]], [[G1GC — архитектура и tuning]], [[Write Barriers и Card Table]], [[JVM флаги для GC]]
+[[ZGC и Generational ZGC]], [[G1GC — архитектура и tuning]], [[Write Barriers и Card Table]], [[JVM флаги для GC]], [[Safepoints и Stop-The-World]], [[GC Roots и достижимость объектов]], [[Выбор GC — сравнительная таблица]]
 
 ---
 

@@ -30,6 +30,7 @@ jcmd <pid> JFR.check
 | GC | `jdk.GCPhasePause` | Длительность GC пауз |
 | GC | `jdk.GarbageCollection` | Тип GC, до/после heap |
 | Memory | `jdk.ObjectAllocationInNewTLAB` | Аллокации (sampling) |
+| Memory | `jdk.OldObjectSample` | Объекты, пережившие много GC — кандидаты на leak, работает без heap dump (по умолчанию включено в `profile`-конфиге) |
 | IO | `jdk.SocketRead/Write` | Сетевые операции |
 | Thread | `jdk.MonitorWait` | Ожидание на мониторе |
 | JIT | `jdk.Compilation` | JIT компиляции |
@@ -126,6 +127,10 @@ jcmd <pid> GC.heap_dump filename=/tmp/live.hprof
 
 # Через jmap:
 jmap -dump:live,format=b,file=/tmp/heap.hprof <pid>
+
+# Thread dump (эквивалент jcmd <pid> Thread.print, отдельная утилита в JDK bin):
+jstack <pid>
+jstack -l <pid>   # + информация о лок-объектах (ownable synchronizers)
 ```
 
 **Eclipse MAT — ключевые отчёты:**

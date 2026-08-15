@@ -5,6 +5,8 @@
 ## Связанные темы
 [[ClassLoaders]], [[JVM Startup и AppCDS]], [[JIT Compiler & Optimizations]], [[Сборка и запуск Java-приложений]]
 
+> Эта заметка — про Leyden AOT (JEP 483) и его отличия от GraalVM. Полная механика AppCDS (флаги, шаги dump/create, Dynamic CDS, pitfalls) — в [[JVM Startup и AppCDS]], здесь она только кратко упомянута как база, от которой Leyden отталкивается.
+
 ---
 
 ## Проблема: Java Startup
@@ -22,30 +24,11 @@
 GraalVM Native Image решает это, но ограничивает динамичность Java
 ```
 
-## AppCDS — Class Data Sharing
+## AppCDS — предшественник Leyden
 
-**AppCDS** (Application Class-Data Sharing, Java 10+) кэширует результат загрузки и парсинга классов в shared archive:
+**AppCDS** (Application Class-Data Sharing, Java 10+, Dynamic-вариант — Java 13+) кэширует результат загрузки/парсинга классов в shared archive (`.jsa`): даёт ~200-500 мс экономии на class loading. Полный разбор флагов (`-XX:DumpLoadedClassList`, `-Xshare:dump`, `-XX:ArchiveClassesAtExit`, `-XX:+AutoCreateSharedArchive`) и подводных камней — в [[JVM Startup и AppCDS]].
 
-```bash
-# Шаг 1: Создать список классов (запустить приложение и записать)
-java -XX:DumpLoadedClassList=app.classlist -jar app.jar
-
-# Шаг 2: Создать архив
-java -Xshare:dump -XX:SharedClassListFile=app.classlist \
-     -XX:SharedArchiveFile=app.jsa -jar app.jar
-
-# Шаг 3: Запустить с архивом
-java -Xshare:on -XX:SharedArchiveFile=app.jsa -jar app.jar
-
-# Экономия: ~200-500 мс на class loading
-```
-
-**Dynamic AppCDS** (Java 13+): не нужен отдельный шаг dump — архив создаётся автоматически при завершении:
-
-```bash
-java -XX:ArchiveClassesAtExit=app.jsa -jar app.jar  # запись
-java -XX:SharedArchiveFile=app.jsa -jar app.jar      # использование
-```
+Leyden не заменяет AppCDS, а расширяет саму идею: вместо кэша только class-data — кэш **всего** startup-состояния (class loading + linking + JVM initialization, а в перспективе и JIT-артефактов), организованный слоями (см. ниже).
 
 ## Project Leyden: Ahead-of-Time Class Loading & Linking
 

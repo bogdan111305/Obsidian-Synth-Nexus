@@ -1,3 +1,7 @@
+# Java Syntax Reference
+
+> Примитивы, переменные, массивы, управляющие конструкции и циклы — синтаксическая база языка. На интервью чаще всего спрашивают: диапазоны и дефолты примитивов, autoboxing и Integer cache, ковариантность массивов (`ArrayStoreException`), разницу switch statement/expression, ловушки `for-each` и отсутствие TCO в рекурсии.
+
 ## Связанные темы
 [[Приведение типов, widening conversion, narrowing conversion]], [[Java Memory Structure]], [[Модель памяти Java (JMM) и барьеры памяти]], [[Java String]], [[Java Stream API & Functional Programming]]
 
@@ -471,7 +475,7 @@ String msg = switch (obj) {
 - **Многопоточность:** условные операторы не атомарны. Проверка и действие должны быть синхронизированы (например, `if (!map.containsKey(key)) map.put(key, value)` — не потокобезопасно).
 
 ---
-### Циклы
+## Циклы
 
 ### Виды циклов
 

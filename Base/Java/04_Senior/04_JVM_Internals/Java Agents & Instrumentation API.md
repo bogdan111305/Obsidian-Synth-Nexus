@@ -90,6 +90,20 @@ public class TimingTransformer implements ClassFileTransformer {
 }
 ```
 
+### Расширение classpath для агента
+
+Если трансформатор инжектирует вызов вспомогательного класса (хелпера из shaded-библиотеки агента) в код, загружаемый bootstrap/system classloader'ом, обычный classpath агента этот хелпер не увидит — нужно явно добавить jar в поиск нужного classloader'а:
+
+```java
+public static void premain(String args, Instrumentation inst) throws IOException {
+    JarFile helperJar = new JarFile("agent-helpers.jar");
+    inst.appendToBootstrapClassLoaderSearch(helperJar); // виден классам из bootstrap CL (java.lang.* и др.)
+    inst.appendToSystemClassLoaderSearch(helperJar);    // виден классам из system CL
+}
+```
+
+Так APM-агенты (Datadog, New Relic) инжектируют runtime-хелперы, не засоряя classpath приложения.
+
 ---
 
 ## Low-Level: ASM
@@ -297,3 +311,4 @@ inst.redefineClasses(new ClassDefinition(MyService.class, newBytecode));
 - **Subclassing не работает с `final`** — ByteBuddy `.subclass()` не может субклассировать `final` классы (String, etc.). Используй `Advice` или ASM для direct bytecode injection.
 - **Advice code в production-classpath** — класс `ServiceAdvice` должен быть доступен в агентском jar, не в приложении. Иначе `ClassNotFoundException` при инструментировании. Используй isolated classloader или shadow jar.
 - **ClassLoader isolation для трансформатора** — трансформатор вызывается для каждого загружаемого класса, включая классы JDK. Всегда проверяй `className` в начале `transform()` и возвращай `null` для чужих классов, иначе агент инструментирует внутренности JDK.
+- **appendToBootstrapClassLoaderSearch делает класс видимым глобально** — helper-jar становится доступен вообще всем classloader'ам процесса. Если версия библиотеки в helper-jar отличается от версии в classpath приложения — конфликт классов с одинаковым именем, загруженных разными loader'ами (`LinkageError`/`ClassCastException`).

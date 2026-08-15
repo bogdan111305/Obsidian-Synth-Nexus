@@ -39,6 +39,9 @@
 - Когда нужен точный контроль над числом потоков
 - Код с `ThreadLocal` при большой стоимости per-thread данных
 
+> [!NOTE] Почему крипто-код обязан идти на Platform Thread
+> При демонтировании virtual thread его стек (continuation) сериализуется в Heap — байты, которые в platform thread жили бы только в стеке потока, на VT временно становятся обычным heap-объектом, доступным GC/heap dump до следующей сборки мусора. Для крипто-операций это ломает инвариант «ключ — только в стеке, обнулён сразу после использования»: `Arrays.fill(key, (byte) 0)` не поможет, если копия байтов ключа уже осела в heap как часть continuation. Поэтому крипто-код должен выполняться на выделенном пуле platform threads. Пример из практики — проект «Цифровой Бункер» (репозиторий `digital-bunker-yandex-storage`, CLAUDE.md §11): `Executors.newFixedThreadPool(N, Thread.ofPlatform().name("crypto-", 0).factory())` для всех операций с `Tink StreamingAead`/DEK/CK.
+
 ---
 
 ## Бенчмарк: throughput при I/O-bound нагрузке

@@ -4,7 +4,7 @@
 > На интервью: разница fair/unfair, write starvation в RWLock, ловушки StampedLock, как работает AQS внутри.
 
 ## Связанные темы
-[[Java Monitor]], [[CAS и Unsafe]], [[Модель памяти Java (JMM) и барьеры памяти]], [[Atomic (java.util.concurrent.atomic)]]
+[[Java Monitor]], [[CAS и Unsafe]], [[Модель памяти Java (JMM) и барьеры памяти]], [[Atomic]]
 
 ---
 

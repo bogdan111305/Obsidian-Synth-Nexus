@@ -50,10 +50,10 @@ counter.accumulateAndGet(5, Integer::max); // counter = max(counter, 5)
 
 ## Как работает CAS
 
-CAS (Compare-And-Swap) — одна атомарная инструкция процессора: `CMPXCHG` (x86) / `LDXR`+`STXR` (ARM).
+CAS (Compare-And-Swap) — атомарная инструкция процессора (`CMPXCHG` на x86, `LDXR`+`STXR` на ARM), на которой построены все методы этого пакета: спин-цикл читает текущее значение и пытается заменить его, повторяя попытку при конфликте. Полный разбор механизма, различий x86/ARM (spurious failure) и `compareAndExchange` — в [[CAS и Unsafe]].
 
 ```java
-// Логика incrementAndGet (упрощённо):
+// Логика incrementAndGet (упрощённо) — спин-цикл вокруг CAS:
 int current, next;
 do {
     current = get();          // volatile read
@@ -62,7 +62,7 @@ do {
 return next;
 ```
 
-Связь с JMM: `compareAndSet` имеет семантику volatile — устанавливает happens-before между потоками.
+Связь с JMM: успешный `compareAndSet` имеет семантику volatile — устанавливает happens-before между потоками (неуспешный — нет).
 
 ---
 
@@ -138,7 +138,7 @@ class ServiceMonitor {
 
 Проблема: поток читает A, другой меняет A→B→A, первый делает CAS(A,C) — успешно, хотя структура уже изменилась.
 
-Критично в lock-free стеках и очередях, где узел может быть переиспользован.
+Критично в lock-free стеках и очередях, где узел может быть переиспользован — конкретный сценарий с interleaving двух потоков разобран в [[CAS и Unsafe]].
 
 ```java
 AtomicStampedReference<String> ref = new AtomicStampedReference<>("A", 0);
@@ -156,7 +156,7 @@ ref.compareAndSet("A", "C", stamp[0], stamp[0] + 1);
 
 ## VarHandle (Java 9+)
 
-`VarHandle` — замена `Unsafe`. Предоставляет режимы доступа с разными гарантиями порядка:
+`VarHandle` — стабильная замена `Unsafe` (миграция и статус `Unsafe` в Java 17+ — [[CAS и Unsafe]]). Помимо `get`/`set`/`compareAndSet` даёт тонкий контроль над memory ordering — режимы Plain/Opaque/Acquire-Release/Volatile и их барьеры разобраны в [[Модель памяти Java (JMM) и барьеры памяти]]. Используется для кастомных lock-free структур, когда Atomic-классов недостаточно (например, CAS над полем произвольного объекта без обёртки в `AtomicReference`):
 
 ```java
 class Node {
@@ -173,35 +173,10 @@ class Node {
     }
 
     void demo() {
-        // Plain — нет гарантий JMM (быстро, для однопоточного кода):
-        STATE.set(this, 1);
-        int v = (int) STATE.get(this);
-
-        // Opaque — атомарность без happens-before (индикаторы прогресса):
-        STATE.setOpaque(this, 1);
-
-        // Acquire / Release — однонаправленные барьеры (дешевле volatile на ARM):
-        STATE.setRelease(this, 1);              // StoreStore + LoadStore барьер
-        int acq = (int) STATE.getAcquire(this); // LoadLoad + LoadStore барьер
-
-        // Volatile — полный барьер (эквивалент volatile-поля):
-        STATE.setVolatile(this, 1);
-
-        // CAS:
-        STATE.compareAndSet(this, 0, 1);
-        int witnessed = (int) STATE.compareAndExchange(this, 0, 1); // возвращает observed
+        STATE.setVolatile(this, 1);                                // полный барьер, эквивалент volatile-поля
+        STATE.compareAndSet(this, 0, 1);                            // CAS
+        int witnessed = (int) STATE.compareAndExchange(this, 0, 1); // CAS, возвращает observed вместо boolean
     }
-}
-```
-
-**Паттерн publish через Acquire/Release** (дешевле полного volatile, особенно на ARM):
-```java
-// Producer:
-STATE.setRelease(this, READY);   // все предшествующие записи видны consumer'у
-
-// Consumer:
-if ((int) STATE.getAcquire(this) == READY) {
-    // всё, что producer записал до setRelease, здесь видно
 }
 ```
 

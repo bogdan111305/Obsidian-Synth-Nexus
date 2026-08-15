@@ -1,7 +1,7 @@
 # Java Stream API & Functional Programming
 
 > **Stream** — ленивый одноразовый pipeline: Источник → Промежуточные операции (lazy) → Терминальная операция (запускает выполнение). Лямбды реализованы через `invokedynamic` + `LambdaMetafactory`, не анонимные классы. Non-capturing лямбды — singleton.
-> На интервью: stateless vs stateful операции, почему `sorted()` блокирует с infinite stream, capturing vs non-capturing лямбды, 4 типа method references, когда parallelStream вредит, Gatherers (Java 24).
+> На интервью: stateless vs stateful операции, почему `sorted()` блокирует с infinite stream, capturing vs non-capturing лямбды, 4 типа method references, когда parallelStream вредит, Gatherers (Java 24), `reduce()` vs `collect()`.
 
 ## Связанные темы
 [[Общая иерархия коллекций]], [[MethodHandle & LambdaMetafactory]], [[Java Generic]]
@@ -209,6 +209,71 @@ stream.skip(n)
 // Short-circuit: findFirst/findAny/anyMatch/allMatch — могут остановить поток раньше
 // Проблема: sorted() + infinite stream → никогда не закончится!
 Stream.iterate(1, n -> n + 1).sorted().findFirst(); // НИКОГДА не завершится
+```
+
+---
+
+## Терминальные операции
+
+Запускают pipeline и производят результат (значение, коллекцию, side effect). После вызова stream закрыт.
+
+```java
+// forEach / forEachOrdered — side effect:
+stream.forEach(System.out::println);         // в parallel порядок НЕ гарантирован
+stream.forEachOrdered(System.out::println);  // сохраняет encounter order даже в parallel (медленнее — теряется выгода от параллелизма)
+
+// count — количество элементов:
+long n = stream.filter(s -> s.length() > 3).count();
+
+// min / max — принимают Comparator, результат Optional (стрим может быть пуст):
+Optional<Employee> topPaid = employees.stream().max(Comparator.comparing(Employee::getSalary));
+
+// anyMatch / allMatch / noneMatch — short-circuit:
+boolean hasAdult  = people.stream().anyMatch(p -> p.getAge() >= 18);
+boolean allAdults = people.stream().allMatch(p -> p.getAge() >= 18);
+boolean noMinors  = people.stream().noneMatch(p -> p.getAge() < 18);
+
+// findFirst / findAny — short-circuit; findAny быстрее в parallel (не обязан искать именно первый по порядку):
+Optional<String> first = stream.filter(s -> s.startsWith("A")).findFirst();
+Optional<String> any   = parallelStream.filter(s -> s.startsWith("A")).findAny();
+
+// toArray:
+Object[] arr    = stream.toArray();
+String[] strArr = stream.toArray(String[]::new); // typed — через generator, без unchecked cast
+```
+
+**`reduce()` — три перегрузки:**
+```java
+Optional<Integer> r1 = stream.reduce((a, b) -> a + b);              // без identity → Optional (стрим может быть пуст)
+Integer            r2 = stream.reduce(0, (a, b) -> a + b);           // с identity → T напрямую, не Optional
+Integer            r3 = stream.reduce(0,
+    (partial, elem) -> partial + elem,   // accumulator
+    (a, b) -> a + b);                    // combiner — вызывается ТОЛЬКО в parallel, объединяет partial-результаты веток
+```
+
+**`reduce()` vs `collect()`:** `reduce()` рассчитан на **иммутабельную** аккумуляцию — каждый шаг создаёт новый результат. Для мутабельных контейнеров (`List`, `StringBuilder`) это ловушка — O(n²), копирование на каждом элементе. `collect()` использует **мутабельный** аккумулятор через `Supplier`/`BiConsumer`/`BinaryOperator` — линейная сложность, поэтому для построения коллекций всегда `collect()`, не `reduce()`.
+
+```java
+// ПЛОХО: reduce для списка — нарушает контракт (аккумулятор должен быть immutable-friendly) и медленно:
+List<Integer> bad = stream.reduce(new ArrayList<Integer>(),
+    (list, x) -> { list.add(x); return list; },
+    (l1, l2) -> { l1.addAll(l2); return l1; });
+
+// ХОРОШО: collect — мутабельный аккумулятор:
+List<Integer> good = stream.collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+List<Integer> good2 = stream.collect(Collectors.toList()); // то же самое, короче
+```
+
+**Примитивные стримы — терминалы без boxing:**
+```java
+int sum = IntStream.rangeClosed(1, 100).sum();
+OptionalDouble avg = IntStream.rangeClosed(1, 100).average();
+
+IntSummaryStatistics stats = IntStream.rangeClosed(1, 100).summaryStatistics();
+stats.getMin(); stats.getMax(); stats.getAverage(); stats.getCount(); stats.getSum(); // один проход, все агрегаты сразу
+
+// Аналог для объектного Stream (через Collectors):
+IntSummaryStatistics empStats = employees.stream().collect(Collectors.summarizingInt(Employee::getAge));
 ```
 
 ---
@@ -473,6 +538,8 @@ long count = list.stream().filter(predicate).count(); // лучше
 - Когда `parallelStream()` работает хуже `stream()`? (малые коллекции, I/O, порядок)
 - Что такое `Collectors.teeing()`? Для чего он нужен?
 - Что такое Gatherer? Чем отличается от Collector?
+- Чем `reduce()` отличается от `collect()`? Почему `reduce()` — плохой выбор для построения `List`?
+- Когда у `reduce()`/`collect()` вызывается combiner-аргумент?
 
 ---
 
@@ -484,4 +551,6 @@ long count = list.stream().filter(predicate).count(); // лучше
 - **`toMap()` с дублирующимися ключами** — `IllegalStateException` без merge-функции. Используй `toMap(k, v, (a, b) -> b)` или `groupingBy`.
 - **`Collectors.toList()` vs `Stream.toList()`** — `Stream.toList()` (Java 16) возвращает **unmodifiable** список. `Collectors.toList()` возвращает modifiable. Не взаимозаменяемы.
 - **`flatMap` с null** — `flatMap(fn)` где fn возвращает null → `NullPointerException`. Возвращай `Stream.empty()` вместо null.
+- **`reduce()` для построения `List`/`StringBuilder`** — мутирует "неизменяемый" аккумулятор вручную, ломая контракт `reduce` (комбинатор ожидает переиспользуемые, потенциально параллельные аккумуляторы) и получая O(n²) на копированиях. Используй `collect()`.
+- **`reduce()` без identity на пустом stream** — вернёт `Optional.empty()`, а не бросит исключение. С identity — вернёт сам identity. Проверяй, какая версия используется, прежде чем звать `.get()` на результате.
 - **parallelStream + ForkJoinPool.commonPool()** — если приложение использует VirtualThread или CF, они тоже делят commonPool. Тяжёлый параллельный stream может блокировать асинхронные задачи. Для изоляции: `.collect(Collectors.toList())` в кастомном ForkJoinPool через `pool.submit(() -> stream.parallel()...)`.
