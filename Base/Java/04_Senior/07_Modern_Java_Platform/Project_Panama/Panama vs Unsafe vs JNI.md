@@ -1,9 +1,9 @@
-# Panama vs Unsafe vs JNI
+﻿# Panama vs Unsafe vs JNI
 
 > Три способа работать с нативным кодом/памятью в Java: **JNI** (стандартный, но дорогой), **Unsafe** (быстрый, но опасный и непубличный), **FFM API / Panama** (быстрый, безопасный, официальный). Panama — замена обоим в долгосрочной перспективе.
 
 ## Связанные темы
-[[Foreign Function and Memory API]], [[Структура памяти JVM]], [[Java Agents & Instrumentation API]]
+[[Foreign Function and Memory API]], [[Java Memory Structure]], [[Java Agents & Instrumentation API]]
 
 > Эта заметка — decision-making: чем FFM лучше JNI/Unsafe и когда что выбирать. Полная механика `MemorySegment`/`Arena`/`Linker` с кодом — в [[Foreign Function and Memory API]], здесь код не дублируется.
 

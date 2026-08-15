@@ -21,12 +21,11 @@
 ### 02_Collections_and_Streams/Interfaces Collection
 `Base/Java/01_Junior/02_Collections_and_Streams/Interfaces Collection/`
 
+- [[Общая иерархия коллекций]] — Collection → List/Set/Queue, отдельно Map и почему он не extends Collection
 - [[Интерфейс List]] — ArrayList, LinkedList, CopyOnWriteArrayList
 - [[Интерфейс Map]] — HashMap, TreeMap, ConcurrentHashMap internals
 - [[Интерфейс Set]] — HashSet, TreeSet, LinkedHashSet
 - [[Интерфейсы Iterator и Iterable]] — fail-fast vs fail-safe
-
-> Обзорной заметки про общую иерархию `Collection`/`Map` пока нет — см. пункт A.2 в [аудите вики](../../../Улучшение%20вики%20знаний/Аудит%20вики%20по%20Senior%20Java%20Roadmap.md).
 
 ### 05_IO_and_Networking
 `Base/Java/01_Junior/05_IO_and_Networking/`
@@ -69,7 +68,7 @@
 | Слой | Файлы |
 |------|-------|
 | **JMM** | [[Модель памяти Java (JMM) и барьеры памяти]] |
-| **Concurrent Utils** | [[Atomic]], [[CAS и Unsafe]], [[Lock]], [[Synchronizers]] |
+| **Concurrent Utils** | [[Atomic]], [[CAS и Unsafe]], [[Lock]], [[Synchronizers]], [[ThreadLocal]] |
 | **Modern Concurrency** | [[Virtual Threads — модель и архитектура]], [[Virtual Threads vs Platform Threads]], [[Carrier Threads и Pinning]], [[Happens-Before в контексте Virtual Threads]], [[Structured Concurrency]], [[Scoped Values (Java 21, JEP 446)]] |
 
 ### 04_JVM_Internals
@@ -111,6 +110,7 @@
 - [[Finalization и Cleaner API]] — finalize() проблемы, PhantomReference
 
 **GC Алгоритмы**
+- [[Выбор GC — сравнительная таблица]] — throughput/latency/heap-range по всем алгоритмам, решающее дерево по SLA
 - [[G1GC — архитектура и tuning]] — regions, IHOP, Mixed GC, Evacuation Failure
 - [[ZGC и Generational ZGC]] — colored pointers, load barrier, <1 мс паузы
 - [[Shenandoah GC]] — Brooks pointers, concurrent relocation

@@ -100,19 +100,10 @@
 - PECS: Producer extends, Consumer super
 - Wildcard Capture, Super Type Token (TypeReference)
 
-**Records** → [[Records]]
-- Canonical constructor, compact constructor, custom accessors
-- Реализует equals/hashCode/toString по полям
-- Immutable value object, можно implements interface
-
-**Sealed Classes** → [[Sealed Classes]]
-- `sealed class Shape permits Circle, Rectangle`
-- Exhaustive switch без default (компилятор проверяет)
-- JIT: deoptimization не нужна — закрытая иерархия
-
-**Pattern Matching** → [[Pattern Matching]], [[Современные возможности — Switch и Pattern Matching]]
-- `instanceof String s &&` → type test + binding
-- Switch patterns: guards `when`, nested patterns, record deconstruction
+**Records, Sealed Classes, Pattern Matching** → [[Современные возможности — Records и Sealed]]
+- Records: canonical/compact constructor, custom accessors, equals/hashCode/toString по полям, immutable value object, можно implements interface
+- Sealed: `sealed class Shape permits Circle, Rectangle`, exhaustive switch без default, JIT не боится деоптимизации — закрытая иерархия
+- Pattern Matching: `instanceof String s &&` → type test + binding; switch patterns: guards `when`, nested patterns, record deconstruction
 
 ---
 

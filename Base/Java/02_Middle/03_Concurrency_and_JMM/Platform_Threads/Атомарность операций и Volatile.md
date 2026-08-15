@@ -1,10 +1,10 @@
-# Атомарность операций и Volatile
+﻿# Атомарность операций и Volatile
 
 > `volatile` — гарантия видимости и happens-before, но NOT атомарности. Барьеры памяти на уровне JIT.
 > На интервью: чем volatile отличается от synchronized, когда volatile достаточно, weak ordering (lazySet/setRelease/setOpaque), False Sharing.
 
 ## Связанные темы
-[[Модель памяти Java (JMM) и барьеры памяти]], [[CAS и Unsafe]], [[Atomic (java.util.concurrent.atomic)]], [[Java Monitor]], [[Производительность коллекций]]
+[[Модель памяти Java (JMM) и барьеры памяти]], [[CAS и Unsafe]], [[Atomic]], [[Java Monitor]], [[Производительность коллекций]]
 
 ---
 

@@ -3,7 +3,7 @@
 > **Project Leyden** (JEP 483, Java 24 preview) — AOT (Ahead-of-Time) компиляция и снапшоты классов для JVM. Цель: ускорить startup и warm-up Java приложений до уровня нативных. **AppCDS** (Application Class-Data Sharing) — предшественник: кэш загруженных классов между запусками.
 
 ## Связанные темы
-[[ClassLoaders]], [[JVM Startup и AppCDS]], [[JIT Compiler & Optimizations]], [[Сборка и запуск Java-приложений]]
+[[ClassLoaders]], [[JVM Startup и AppCDS]], [[JIT Compiler & Optimizations]]
 
 > Эта заметка — про Leyden AOT (JEP 483) и его отличия от GraalVM. Полная механика AppCDS (флаги, шаги dump/create, Dynamic CDS, pitfalls) — в [[JVM Startup и AppCDS]], здесь она только кратко упомянута как база, от которой Leyden отталкивается.
 

@@ -1,9 +1,9 @@
-# GC Roots и достижимость объектов
+﻿# GC Roots и достижимость объектов
 
 > **GC Root** — "якорный" объект, который GC считает живым по определению. Объект достижим (живой), если от любого GC Root существует цепочка ссылок до него. Всё недостижимое — мусор.
 
 ## Связанные темы
-[[Write Barriers и Card Table]], [[Safepoints и Stop-The-World]], [[Finalization и Cleaner API]], [[Типы ссылок в Java (Reference Types)]], [[Структура памяти JVM]]
+[[Write Barriers и Card Table]], [[Safepoints и Stop-The-World]], [[Finalization и Cleaner API]], [[Reference Types (Weak, Soft, Phantom)]], [[Java Memory Structure]]
 
 ---
 

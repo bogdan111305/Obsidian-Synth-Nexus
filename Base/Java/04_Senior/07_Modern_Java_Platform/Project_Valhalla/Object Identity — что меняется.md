@@ -1,9 +1,9 @@
-# Object Identity — что меняется
+﻿# Object Identity — что меняется
 
 > **Object Identity** — свойство объекта иметь уникальный адрес в памяти, позволяющий отличить два объекта с одинаковым состоянием. Project Valhalla вводит объекты без identity (Value Objects), что ломает ряд предположений Java-кода и требует пересмотра паттернов.
 
 ## Связанные темы
-[[Value Classes и Primitive Classes]], [[Valhalla и коллекции]], [[Типы ссылок в Java (Reference Types)]], [[Concurrent/CAS и Unsafe]]
+[[Value Classes и Primitive Classes]], [[Valhalla и коллекции]], [[Reference Types (Weak, Soft, Phantom)]], [[CAS и Unsafe]]
 
 > Эта заметка — про identity **сейчас** и что конкретно ломается при переходе на value-семантику (`synchronized`, `identityHashCode`, кэш `Integer`, `IdentityHashMap`/`WeakReference`). Сам синтаксис/мотивация value и primitive classes (Object Tax, memory layout, JEP-статус) — в [[Value Classes и Primitive Classes]]. Эффект на generic-коллекции — в [[Valhalla и коллекции]].
 

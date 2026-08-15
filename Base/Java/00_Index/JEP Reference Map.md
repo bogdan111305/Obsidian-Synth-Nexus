@@ -55,13 +55,13 @@
 
 | JEP | Название | Java | Статус | Заметка |
 |-----|---------|------|--------|---------|
-| JEP 305 | Pattern Matching instanceof (Preview) | 14 | Preview | [[Pattern Matching]] |
+| JEP 305 | Pattern Matching instanceof (Preview) | 14 | Preview | [[Современные возможности — Records и Sealed]] |
 | JEP 394 | Pattern Matching instanceof | 16 | Final | |
-| JEP 359 | Records (Preview) | 14 | Preview | [[Records]] |
+| JEP 359 | Records (Preview) | 14 | Preview | [[Современные возможности — Records и Sealed]] |
 | JEP 395 | Records | 16 | Final | |
-| JEP 360 | Sealed Classes (Preview) | 15 | Preview | [[Sealed Classes]] |
+| JEP 360 | Sealed Classes (Preview) | 15 | Preview | [[Современные возможности — Records и Sealed]] |
 | JEP 409 | Sealed Classes | 17 | Final | |
-| JEP 441 | Pattern Matching for switch | 21 | Final | [[Современные возможности — Switch и Pattern Matching]] |
+| JEP 441 | Pattern Matching for switch | 21 | Final | [[Современные возможности — Records и Sealed]] |
 | JEP 440 | Record Patterns | 21 | Final | |
 | JEP 461 | Stream Gatherers (Preview) | 22 | Preview | [[Java Stream API & Functional Programming]] |
 | JEP 485 | Stream Gatherers | 24 | Final | |

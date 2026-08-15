@@ -1,9 +1,9 @@
-# Foreign Function and Memory API
+﻿# Foreign Function and Memory API
 
 > **FFM API** (Foreign Function & Memory API, JEP 454, Java 22 finalized) — официальный способ взаимодействия Java с нативным кодом и нативной памятью. Заменяет JNI и `sun.misc.Unsafe`. Безопасный, удобный, поддерживает zero-copy работу с off-heap memory.
 
 ## Связанные темы
-[[Panama vs Unsafe vs JNI]], [[Vector API — SIMD в Java]], [[Finalization и Cleaner API]], [[Структура памяти JVM]]
+[[Panama vs Unsafe vs JNI]], [[Vector API — SIMD в Java]], [[Finalization и Cleaner API]], [[Java Memory Structure]]
 
 > Эта заметка — API reference: механика `MemorySegment`/`Arena`/`Linker` с примерами кода. Сравнение с JNI/Unsafe, когда что выбирать и миграция — в [[Panama vs Unsafe vs JNI]] (код там не дублируется).
 

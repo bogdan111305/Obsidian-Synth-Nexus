@@ -1,10 +1,10 @@
-# Процессы и Потоки в Java
+﻿# Процессы и Потоки в Java
 
 > **Поток** — единица выполнения внутри JVM-процесса. Platform threads — нативные OS потоки (~1-2MB stack). **Virtual threads** (Java 21) — легковесные (~KB), миллионы одновременно, маппятся на OS threads через continuation механизм.
 > На интервью: состояния потоков, разница BLOCKED vs WAITING, virtual thread internals, pinning и как его избежать.
 
 ## Связанные темы
-[[Java Monitor]], [[Lock]], [[Прерывание потока в Java]], [[ThreadPool, Future, Callable, Executors, CompletableFuture]], [[Structured Concurrency (Java 21)]]
+[[Java Monitor]], [[Lock]], [[Прерывание потока в Java]], [[ThreadPool, Future, Callable, Executors, CompletableFuture]], [[Structured Concurrency]]
 
 ---
 

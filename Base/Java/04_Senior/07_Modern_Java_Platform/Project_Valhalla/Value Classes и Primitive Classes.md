@@ -1,9 +1,9 @@
-# Value Classes и Primitive Classes
+﻿# Value Classes и Primitive Classes
 
 > **Project Valhalla** (JEP 401 preview Java 23, JEP 402 Java 24) вводит **Value Classes** — объекты без identity, хранимые по значению. Это позволяет JVM оптимизировать layout в памяти: избавиться от заголовков объектов и косвенной адресации, хранить данные "flat" в массивах и полях.
 
 ## Связанные темы
-[[Object Identity — что меняется]], [[Valhalla и коллекции]], [[Структура памяти JVM]], [[Java Bytecode — структура и опкоды]]
+[[Object Identity — что меняется]], [[Valhalla и коллекции]], [[Java Memory Structure]], [[Java Bytecode — структура и опкоды]]
 
 > Эта заметка — про **что такое** value/primitive classes и зачем они нужны (Object Tax, memory layout, JEP-статус, opcode'ы). Что именно ломается при отказе от identity — `synchronized`, `identityHashCode`, кэш `Integer`, `IdentityHashMap` — разобрано в [[Object Identity — что меняется]] и здесь не повторяется. Эффект на generic-коллекции — в [[Valhalla и коллекции]].
 

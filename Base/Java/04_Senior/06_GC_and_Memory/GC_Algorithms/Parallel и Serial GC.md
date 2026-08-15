@@ -1,9 +1,9 @@
-# Parallel и Serial GC
+﻿# Parallel и Serial GC
 
 > **Serial GC** — однопоточный сборщик, STW. **Parallel GC** (Throughput Collector) — многопоточный STW сборщик. Оба: generational (Young/Old), без concurrent фаз. Цель — максимальный throughput, latency не в приоритете.
 
 ## Связанные темы
-[[G1GC — архитектура и tuning]], [[ZGC и Generational ZGC]], [[JVM флаги для GC]], [[Структура памяти JVM]], [[GC Roots и достижимость объектов]], [[Safepoints и Stop-The-World]], [[Выбор GC — сравнительная таблица]]
+[[G1GC — архитектура и tuning]], [[ZGC и Generational ZGC]], [[JVM флаги для GC]], [[Java Memory Structure]], [[GC Roots и достижимость объектов]], [[Safepoints и Stop-The-World]], [[Выбор GC — сравнительная таблица]]
 
 ---
 

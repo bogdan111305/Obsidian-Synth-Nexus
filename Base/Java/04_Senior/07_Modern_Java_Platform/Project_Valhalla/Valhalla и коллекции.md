@@ -1,9 +1,9 @@
-# Valhalla и коллекции
+﻿# Valhalla и коллекции
 
 > **Главная мотивация Valhalla для коллекций**: `ArrayList<Integer>` сейчас хранит ссылки на boxed Integer объекты. После Valhalla — сможет хранить `int` напрямую в массиве, без boxing overhead и cache miss. **Specialized generics** (JEP 218/402) — ключевой механизм.
 
 ## Связанные темы
-[[Value Classes и Primitive Classes]], [[Object Identity — что меняется]], [[Интерфейс List]], [[Интерфейс Map]], [[Java Stream API]]
+[[Value Classes и Primitive Classes]], [[Object Identity — что меняется]], [[Интерфейс List]], [[Интерфейс Map]], [[Java Stream API & Functional Programming]]
 
 > Эта заметка — про boxing, generics и коллекции (`ArrayList<Integer>`, `HashMap`, memory layout массивов). Identity-семантика (почему `IdentityHashMap` несовместим с value keys) — в [[Object Identity — что меняется]]. Сам синтаксис value/primitive classes — в [[Value Classes и Primitive Classes]].
 
