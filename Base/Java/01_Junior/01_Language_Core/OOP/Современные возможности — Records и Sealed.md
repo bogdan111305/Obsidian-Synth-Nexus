@@ -118,9 +118,9 @@ if (obj instanceof Circle(Point(var x, var y), var r)) {
 case Circle(_, var r) -> Math.PI * r * r; // Нам не важен центр круга
 ```
 
-### Primitive Types in Patterns (Java 25)
+### Primitive Types in Patterns (Java 25, preview)
 
-Позволяет использовать примитивы в паттернах без лишнего автобоксинга, обеспечивая высокую производительность.
+JEP 507 — третий preview (после JEP 455 в Java 23 и JEP 488 в Java 24); в Java 25 фича всё ещё требует `--enable-preview` и не финализирована. Позволяет использовать примитивы в паттернах без лишнего автобоксинга, обеспечивая высокую производительность.
 
 ```java
 if (obj instanceof int i) { /* ... */ }

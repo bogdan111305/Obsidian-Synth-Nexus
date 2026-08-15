@@ -1,7 +1,25 @@
 # Structured Concurrency (Java 21+)
 
-> **Structured Concurrency** (Java 21, JEP 453) — параллельные задачи живут внутри try-with-resources scope. Когда scope закрывается — все дочерние задачи автоматически отменяются. Предсказуемое время жизни, без утечек потоков.
-> На интервью: чем отличается от CompletableFuture, как гарантированно нет утечек, ShutdownOnFailure vs ShutdownOnSuccess, как работает с ScopedValues.
+> **Structured Concurrency** — параллельные задачи живут внутри try-with-resources scope. Когда scope закрывается — все дочерние задачи автоматически отменяются. Предсказуемое время жизни, без утечек потоков.
+> На интервью: чем отличается от CompletableFuture, как гарантированно нет утечек, ShutdownOnFailure vs ShutdownOnSuccess (или их актуальный эквивалент — `Joiner`, см. ниже), как работает с ScopedValues.
+
+> [!WARNING] Статус фичи и история JEP — ещё НЕ финализирована
+> `StructuredTaskScope` — самый нестабильный API во всей вики. Полная цепочка: JEP 428 (incubator, Java 19) → JEP 437 (2nd incubator, Java 20) → **JEP 453 (preview, Java 21)** → JEP 462 (2nd preview, Java 22) → JEP 480 (3rd preview, Java 23) → JEP 499 (4th preview, Java 24) → JEP 505 (5th preview, Java 25) → **JEP 525 (6th preview, Java 26, текущий актуальный)**. На момент написания (Java 26, март 2026) фича всё ещё **preview**, требует `--enable-preview`, финализация ожидается не раньше JDK 27.
+>
+> **Критично: публичные подклассы `ShutdownOnFailure`/`ShutdownOnSuccess` из примеров ниже — УДАЛЕНЫ начиная с JEP 499 (Java 24).** Их заменил интерфейс `Joiner` + статические фабричные методы `StructuredTaskScope.open(...)` (публичных конструкторов больше нет). Код ниже показывает исходный API preview-эры Java 21 (JEP 453) — он больше не компилируется на Java 24+. Актуальный эквивалент:
+> ```java
+> // Актуальный API (JEP 499+, Java 24+): open() + Joiner вместо конструктора подкласса
+> try (var scope = StructuredTaskScope.open(
+>         StructuredTaskScope.Joiner.<String>allSuccessfulOrThrow())) {
+>     var userTask = scope.fork(() -> userService.findById(userId));
+>     var ordersTask = scope.fork(() -> orderService.findByUser(userId));
+>     scope.join(); // возвращает Stream<Subtask<String>> вместо void
+>     return new UserProfile(userTask.get(), ordersTask.get());
+> }
+> // "Первый успешный": Joiner.anySuccessfulResultOrThrow()
+> // handleComplete() переопределяется через Joiner.onComplete()
+> ```
+> На интервью важно уметь объяснить ОБЕ модели (собеседующий может знать любую из них) и явно называть текущий статус — preview, не final.
 
 ## Связанные темы
 [[Scoped Values (Java 21, JEP 446)]], [[Процессы и Потоки, Thread, Runnable, состояния потоков]], [[ThreadPool, Future, Callable, Executors, CompletableFuture]]
@@ -195,8 +213,8 @@ void handleRequest(TraceContext ctx, User user) throws Exception {
 | Отладка stektrace | 15+ строк FJP internals | Прямой stack от fork() до ошибки |
 | Scoped Values | Нет автонаследования | Автоматически в fork() |
 | Thread type | Platform/Virtual | Virtual (default) |
-| Java версия | Java 8+ | Java 21+ |
-| "Первый выигрывает" | `anyOf()` (без отмены остальных) | `ShutdownOnSuccess` (с отменой) |
+| Java версия | Java 8+ | Java 19+ incubator → **preview по Java 26** (JEP 525), не final |
+| "Первый выигрывает" | `anyOf()` (без отмены остальных) | `ShutdownOnSuccess` (Java 21-23) / `Joiner.anySuccessfulResultOrThrow()` (Java 24+) — с отменой |
 
 **Когда CompletableFuture всё ещё лучше:**
 - Длинные pipeline трансформаций: `.thenApply().thenCompose().thenAccept()`

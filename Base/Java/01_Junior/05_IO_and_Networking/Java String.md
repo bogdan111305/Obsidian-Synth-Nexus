@@ -285,7 +285,9 @@ String Deduplication — механизм G1 GC для устранения ду
 // 3. Если находит дублирующиеся массивы — заменяет их ссылкой на один
 // 4. Старые дубликаты освобождаются GC
 
-// ВАЖНО: Работает только для byte[] (Java 9+ Compact Strings)
+// ВАЖНО: механизм существует с Java 8u20 (JEP 192, работал на char[]);
+// с Java 9+ (Compact Strings, JEP 254) дедуплицирует byte[] — не наоборот,
+// это не Java 9+ фича, просто сменился тип внутреннего массива.
 // String объекты остаются разными — только внутренний массив общий!
 
 String s1 = new String("Hello World"); // byte[] #1
@@ -298,7 +300,9 @@ String s2 = new String("Hello World"); // byte[] #2
 // Когда применять:
 // - Много String с одинаковым содержимым (логи, имена полей, коды)
 // - Heap > 1GB с высокой долей String
-// - Типичный выигрыш: 10-25% heap в enterprise приложениях
+// - Выигрыш ориентировочный, сильно зависит от workload: JEP 192 отталкивался от
+//   наблюдения, что String занимают ~25% heap в больших приложениях, из них
+//   до половины — дубликаты; не воспринимай как гарантированную цифру
 ```
 
 ### Compact Strings (Java 9+) — внутренняя оптимизация
@@ -311,7 +315,7 @@ String s2 = new String("Hello World"); // byte[] #2
 
 // Практический эффект:
 String ascii = "Hello World";     // LATIN1: 11 байт вместо 22 байт
-String unicode = "Привет мир";    // UTF16: 18 байт (кириллица)
+String unicode = "Привет мир";    // UTF16: 20 байт (10 символов × 2 байта, кириллица)
 String mixed = "Hello Привет";    // UTF16: весь массив UTF16 из-за одного unicode символа
 
 // Проверка CODER через reflection (не для production):
@@ -332,7 +336,8 @@ System.out.println(coder == 0 ? "LATIN1" : "UTF16"); // LATIN1
 // BAD: intern() для всех строк - убивает производительность
 for (String line : largeFile) {
     String interned = line.intern(); // КОНКУРЕНЦИЯ за String pool!
-    // String pool — глобальная ConcurrentHashMap (до Java 8: PermGen, теперь Heap)
+    // String pool (StringTable) — нативная хеш-таблица внутри HotSpot
+    // (не java.util.concurrent.ConcurrentHashMap), до Java 7: PermGen, с Java 7 — Heap
     // При высоком параллелизме — contention на pool lock!
 }
 
@@ -340,7 +345,7 @@ for (String line : largeFile) {
 // Хорошие кандидаты: имена полей, коды состояний, страны, категории
 // Плохие кандидаты: UUID, email, username (каждый уникален)
 
-// Java 21+ альтернатива для кэширования строк:
+// Альтернатива для кэширования строк (не привязана к конкретной версии Java):
 // StringTable (символьная таблица JVM) — не трогать вручную
 // Вместо intern(): использовать explicit HashMap<String, String>
 Map<String, String> cache = new HashMap<>();
@@ -352,7 +357,7 @@ String intern(String s) { return cache.computeIfAbsent(s, k -> k); }
 
 **Q1: Почему `String.hashCode()` кэшируется, и как это влияет на HashMap?**
 
-> `String.hashCode()` вычисляется лениво при первом вызове и кэшируется в поле `int hash` (с Java 8 — дополнительный `boolean hashIsZero` для строк с hash=0). Это означает: первый `hashCode()` — O(n) по длине строки, последующие — O(1). HashMap/HashSet вызывают `hashCode()` при каждом `put()`/`get()`. Для горячих String ключей (заголовки HTTP, имена полей) кэш значительно ускоряет lookup. Подводный камень: после `String.intern()` hash кэш НЕ передаётся интернированной строке — она пересчитает при первом обращении.
+> `String.hashCode()` вычисляется лениво при первом вызове и кэшируется в поле `int hash` (с Java 13 — дополнительный `boolean hashIsZero` для строк с hash=0, JDK-8221836). Это означает: первый `hashCode()` — O(n) по длине строки, последующие — O(1). HashMap/HashSet вызывают `hashCode()` при каждом `put()`/`get()`. Для горячих String ключей (заголовки HTTP, имена полей) кэш значительно ускоряет lookup. Подводный камень: после `String.intern()` hash кэш НЕ передаётся интернированной строке — она пересчитает при первом обращении.
 
 **Q2: Как String Deduplication отличается от String Pool (`intern()`)?**
 
@@ -360,4 +365,4 @@ String intern(String s) { return cache.computeIfAbsent(s, k -> k); }
 
 **Q3: Почему конкатенация строк в Java 9+ быстрее чем в Java 8?**
 
-> Java 8: `"Hello " + name + "!"` компилируется в `new StringBuilder().append("Hello ").append(name).append("!").toString()`. Проблема: StringBuilder не знает финальный размер → возможен resize с копированием. Java 9+: `invokedynamic` + `StringConcatFactory.makeConcatWithConstants()`. Bootstrap метод анализирует шаблон конкатенации и генерирует оптимальный код: (1) вычисляет необходимый размер массива заранее; (2) аллоцирует `byte[]` точного размера; (3) копирует части напрямую без промежуточного StringBuilder. Для Latin-1 строк дополнительно использует SIMD. Benchmark: 15-30% быстрее для типичных конкатенаций.
+> Java 8: `"Hello " + name + "!"` компилируется в `new StringBuilder().append("Hello ").append(name).append("!").toString()`. Проблема: StringBuilder не знает финальный размер → возможен resize с копированием. Java 9+: `invokedynamic` + `StringConcatFactory.makeConcatWithConstants()`. Bootstrap метод анализирует шаблон конкатенации и генерирует оптимальный код: (1) вычисляет необходимый размер массива заранее; (2) аллоцирует `byte[]` точного размера; (3) копирует части напрямую без промежуточного StringBuilder. Для Latin-1 строк дополнительно использует SIMD. Ускорение ориентировочное и зависит от шаблона/JIT-прогрева — не воспринимай как гарантированный процент.

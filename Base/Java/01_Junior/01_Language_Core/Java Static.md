@@ -1,6 +1,6 @@
 # Ключевое слово static в Java
 
-> `static` привязывает поле/метод/блок/вложенный класс к **классу**, а не к объекту. Существует в единственном экземпляре. Инициализируется при загрузке класса. Static поля хранятся в **Metaspace** (Java 8+). Нет доступа к `this` и нестатическим членам.
+> `static` привязывает поле/метод/блок/вложенный класс к **классу**, а не к объекту. Существует в единственном экземпляре. Инициализируется при загрузке класса. Static поля хранятся в **Heap** — как часть объекта-зеркала `java.lang.Class` (Java 8+); в Metaspace лежат только метаданные класса (байткод, constant pool, vtable). Нет доступа к `this` и нестатическим членам.
 > На интервью: где хранится static, порядок static initialization, проблема Initialization On Demand Holder, static import злоупотребление.
 
 ## Связанные темы
@@ -13,7 +13,7 @@
 
 ```java
 public class Counter {
-    // Static поле — одно на класс, в Metaspace (ссылка) / Heap (объект)
+    // Static поле — одно на класс, хранится в Heap (в объекте-зеркале Class)
     private static int count = 0;
 
     // Static метод — нет доступа к this, нестатическим полям
@@ -32,11 +32,13 @@ System.out.println(Counter.MAX); // компилятор inline'd: System.out.pr
 
 **Память:**
 ```
-Metaspace:
-  Counter.count   → int 0   (примитив — прямо в Metaspace)
-  Counter.someRef → ↓       (ссылка — в Metaspace, объект — в Heap)
+Heap (объект-зеркало java.lang.Class<Counter>):
+  Counter.count   → int 0   (примитив — прямо в объекте-зеркале)
+  Counter.someRef → ↓       (ссылка — в объекте-зеркале, объект — тоже в Heap)
 Heap:
   someObject
+Metaspace:
+  метаданные класса Counter (байткод методов, constant pool, vtable)
 ```
 
 ---

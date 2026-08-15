@@ -45,7 +45,7 @@ HEAVY LOCK:  | ptr to ObjectMonitor in Heap (62 bit)      | 10 |
 GC MARK:     | forwarding address                         | 11 |
 ```
 
-**Lock Inflation — эскалация блокировки (Java 21+, без biased locks):**
+**Lock Inflation — эскалация блокировки (Java 18+, без biased locks):**
 
 ```
 1. UNLOCKED (01)
@@ -70,7 +70,7 @@ GC MARK:     | forwarding address                         | 11 |
 > [!WARNING] `hashCode()` ломает thin lock
 > `System.identityHashCode(obj)` записывает hash в Mark Word. После этого в Mark Word нет места для LockRecord → thin lock невозможен → сразу inflate в heavy lock! Не вызывай `identityHashCode` на объекте, который используешь как монитор.
 
-**Biased locking удалён в Java 21** (JEP 374 deprecated в Java 15, удалён в Java 21). Требовал stop-the-world revocation при первом обращении другого потока — в продакшне с пулами потоков давал больше STW пауз, чем выигрыша.
+**Biased locking удалён в Java 18** (JEP 374 отключил его по умолчанию и deprecated в Java 15; код окончательно удалён из HotSpot в Java 18, JDK-8256425). Требовал stop-the-world revocation при первом обращении другого потока — в продакшне с пулами потоков давал больше STW пауз, чем выигрыша.
 
 Диагностика: `jstack <pid>`, флаг `-Xlog:monitorinflation*=debug`.
 
@@ -200,7 +200,7 @@ if (deadlocked != null) {
 - Чем `notify()` отличается от `notifyAll()`? Когда что использовать?
 - Что произойдёт если вызвать `wait()` вне `synchronized` блока?
 - Как hashCode влияет на thin lock?
-- Почему biased locking убрали в Java 21?
+- Почему biased locking убрали в Java 18?
 - Какие happens-before гарантии даёт `synchronized`?
 
 ## Подводные камни
